@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Audiology Python Primer</title>
+<meta name="description" content="Python fundamentals for audiological signal processing.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Schibsted+Grotesk:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="assets/bootstrap.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <button class="btn-ghost d-xl-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mnav" aria-controls="mnav" aria-label="Open navigation">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Menu
+    </button>
+    <a class="brand" href="index.html">
+      <span class="t">Technology in Audiology</span>
+    </a>
+    <nav class="unit-nav" aria-label="Units"><a href="index.html">Home</a><a href="unit1.html">Unit 1</a><a href="unit2.html">Unit 2</a><a href="unit3.html">Unit 3</a><a href="unit4.html">Unit 4</a><a href="unit5.html">Unit 5</a><a href="unit6.html">Unit 6</a><a href="python.html" class="active">Python primer</a></nav>
+    <span class="spacer"></span>
+    <button class="btn-ghost" id="predictBtn" type="button" aria-pressed="false" title="Hide all outputs so students predict them before running">Predict mode</button>
+    <button class="btn-accent d-none d-sm-inline-block" id="runAll" type="button">Run all cells</button>
+  </div>
+</header>
+<div class="offcanvas offcanvas-start" tabindex="-1" id="mnav" aria-labelledby="mnavLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="mnavLabel" style="font-family:var(--font-display)">Technology in Audiology</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body"><ul class="mob-units"><li><a href="index.html">Home</a></li><li><a href="unit1.html">Unit 1: Transducers and DSP</a></li><li><a href="unit2.html">Unit 2: Computers and Tele-audiology</a></li><li><a href="unit3.html">Unit 3: Hearing Aids and Implants</a></li><li><a href="unit4.html">Unit 4: Hearing Science Instruments</a></li><li><a href="unit5.html">Unit 5: Analysis Software</a></li><li><a href="unit6.html">Unit 6: Audiology Instruments</a></li><li><a href="python.html" class="active">Python primer</a></li></ul><div class="eyebrow" style="margin-bottom:6px">On this page</div><div id="mnavBody"></div></div>
+</div>
+<div class="shell" id="top">
+  <aside class="sidenav" aria-label="On this page">
+    <div class="eyebrow" style="margin:0 0 8px 8px">On this page</div>
+    <ol class="toc" id="toc">
+      <li class="grp">Orientation</li>
+      <li><a href="#overview"><span class="n">01</span>What and why</a></li>
+      <li><a href="#architecture"><span class="n">02</span>Architecture and signal flow</a></li>
+      <li><a href="#firstlines"><span class="n">03</span>Setup and the first two lines</a></li>
+      <li class="grp">Language core</li>
+      <li><a href="#variables"><span class="n">04</span>Variables</a></li>
+      <li><a href="#vectors"><span class="n">05</span>Vectors</a></li>
+      <li><a href="#matrices"><span class="n">06</span>Matrices</a></li>
+      <li><a href="#functions"><span class="n">07</span>Functions</a></li>
+      <li class="grp">Scientific stack</li>
+      <li><a href="#numpy"><span class="n">08</span>NumPy</a></li>
+      <li><a href="#scipy"><span class="n">09</span>SciPy</a></li>
+      <li><a href="#matplotlib"><span class="n">10</span>Matplotlib</a></li>
+      <li><a href="#librosa"><span class="n">11</span>librosa</a></li>
+      <li><a href="#jupyter"><span class="n">12</span>Jupyter</a></li>
+      <li class="grp">Practice</li>
+      <li><a href="#labs"><span class="n">13</span>Interactive demonstrations</a></li>
+      <li><a href="#clinical"><span class="n">14</span>Clinical applications</a></li>
+      <li><a href="#limits"><span class="n">15</span>Limitations and pitfalls</a></li>
+      <li><a href="#current"><span class="n">16</span>Current developments</a></li>
+      <li><a href="#practice"><span class="n">17</span>Exercises and quick reference</a></li>
+      <li><a href="#faculty"><span class="n">18</span>Faculty guide</a></li>
+      <li><a href="#refs"><span class="n">19</span>References</a></li>
+    <li><a href="#credits"><span class="n">20</span>Picture credits</a></li></ol>
+  </aside>
+  <main>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div>
+        <div class="eyebrow">M.Sc. Audiology · Technology in Audiology</div>
+        <h1>Python fundamentals for audiological signal processing</h1>
+        <p class="lede">A first-reference module for students and faculty. It teaches the Python you need to generate test signals, read recordings, measure levels, filter, analyse spectra and plot audiograms, using the same tools found in hearing research labs.</p>
+        <div class="meta">
+          <span class="chip">Supports Unit 1 (DSP) and Unit 5 (Software)</span>
+          <span class="chip">Practicals P2, P3, P4</span>
+          <span class="chip">2 x 1 h lecture + 2 h lab</span>
+          <span class="chip">No installation needed to read</span>
+        </div>
+      </div>
+      <div class="scope" aria-label="Live pure-tone waveform">
+        <div class="scope-head">
+          <span>Pure tone, first 5 ms, fs = 44 100 Hz</span>
+          <div class="freq-row" id="heroFreqs" role="group" aria-label="Audiometric test frequency"></div>
+        </div>
+        <canvas id="heroCanvas" height="170" aria-label="Waveform of the selected pure tone"></canvas>
+        <div class="scope-code" id="heroCode"></div>
+      </div>
+    </div>
+
+    <!-- 01 OVERVIEW -->
+    <section class="mod" id="overview">
+      <div class="mod-head"><span class="mod-num">01</span><h2>What Python is, and why audiologists use it</h2></div>
+      <p>Python is a general-purpose programming language. On its own it knows nothing about sound. Its value in audiology comes from a stack of open-source scientific libraries built on top of it: NumPy for numbers in arrays, SciPy for filters and signal tools, Matplotlib for plots, librosa for audio and speech features, and Jupyter for notebooks that mix code, results and explanation.</p>
+      <div class="wwh">
+        <div><h4>What it is</h4><p>An interpreted language plus a scientific ecosystem that turns a sound recording into an array of numbers you can measure, transform and plot.</p></div>
+        <div><h4>Why it is required</h4><p>Clinical devices hide their processing. Python lets you open the box: verify a stimulus, reproduce a filter, check a calibration or analyse research data in a way others can repeat.</p></div>
+        <div><h4>How it works</h4><p>Audio is sampled into a vector. Every operation (gain, filtering, FFT, feature extraction) is arithmetic on that vector, done in fast compiled code inside NumPy and SciPy.</p></div>
+      </div>
+      <h3>Where Python sits among audiology software</h3>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Tool</th><th>Best at</th><th>Input / output</th><th>Limitation for this course</th></tr></thead>
+        <tbody>
+          <tr><td>Audacity / Audition</td><td>Listening, editing, quick EQ and noise reduction</td><td>WAV, MP3 / edited audio</td><td>Processing is menu driven and hard to reproduce exactly</td></tr>
+          <tr><td>Praat</td><td>Pitch, formants, spectrograms of speech</td><td>WAV / measurements, TextGrids</td><td>Scripting language is specialised to phonetics</td></tr>
+          <tr><td>MATLAB</td><td>Numerical DSP, toolboxes, legacy research code</td><td>MAT, WAV / arrays, plots</td><td>Licensed; toolboxes cost extra</td></tr>
+          <tr><td>Python</td><td>Reproducible analysis, automation, machine learning</td><td>WAV, CSV, JSON / arrays, plots, reports</td><td>Needs setup; not a validated clinical device</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Learning outcomes</h3>
+      <ul>
+        <li>Store audiological quantities (sampling rate, frequency, dB HL) in correctly typed variables.</li>
+        <li>Build time vectors and signals with NumPy, and organise multi-channel or framed data as matrices.</li>
+        <li>Write reusable functions for tone generation, RMS and dBFS measurement.</li>
+        <li>Compute a spectrum, design a Butterworth band-pass and a 50 Hz notch filter with SciPy.</li>
+        <li>Plot waveforms, spectra and a standard audiogram with Matplotlib.</li>
+        <li>Load audio and extract spectrograms, MFCCs and fundamental frequency with librosa.</li>
+        <li>Run, document and share the whole analysis as a Jupyter notebook.</li>
+      </ul>
+    </section>
+
+    <!-- 02 ARCHITECTURE -->
+    <section class="mod" id="architecture">
+      <div class="mod-head"><span class="mod-num">02</span><h2>Architecture and signal flow</h2></div>
+      <p>Every analysis in this module follows one path. A sound exists as air pressure, a microphone and ADC turn it into integers, a file stores them, and Python reads them into a floating-point array. From that point on, each library handles one stage.</p>
+      <div class="diagram">
+        <svg viewBox="0 0 940 250" role="img" aria-label="Signal flow from microphone to Jupyter report">
+          <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="dg-a"/></marker></defs>
+          <g>
+            <rect class="dg-box" x="10" y="30" width="130" height="70" rx="8"/><text class="dg-t" x="24" y="58">Sound + mic</text><text class="dg-s" x="24" y="78">pressure (Pa)</text><text class="dg-s" x="24" y="92">to voltage</text>
+            <rect class="dg-box" x="170" y="30" width="130" height="70" rx="8"/><text class="dg-t" x="184" y="58">ADC</text><text class="dg-s" x="184" y="78">fs = 44 100 Hz</text><text class="dg-s" x="184" y="92">16-bit PCM</text>
+            <rect class="dg-box" x="330" y="30" width="130" height="70" rx="8"/><text class="dg-t" x="344" y="58">WAV file</text><text class="dg-s" x="344" y="78">int16 samples</text><text class="dg-s" x="344" y="92">+ header</text>
+            <rect class="dg-box acc" x="490" y="30" width="170" height="70" rx="8"/><text class="dg-t" x="504" y="58">Load</text><text class="dg-s" x="504" y="78">librosa.load /</text><text class="dg-s" x="504" y="92">scipy.io.wavfile</text>
+            <rect class="dg-box acc" x="690" y="30" width="230" height="70" rx="8"/><text class="dg-t" x="704" y="58">NumPy array</text><text class="dg-s" x="704" y="78">float64, shape (n,)</text><text class="dg-s" x="704" y="92">values in -1.0 to +1.0</text>
+            <line class="dg-l" x1="140" y1="65" x2="168" y2="65" marker-end="url(#arr)"/>
+            <line class="dg-l" x1="300" y1="65" x2="328" y2="65" marker-end="url(#arr)"/>
+            <line class="dg-l" x1="460" y1="65" x2="488" y2="65" marker-end="url(#arr)"/>
+            <line class="dg-l" x1="660" y1="65" x2="688" y2="65" marker-end="url(#arr)"/>
+            <path class="dg-l" d="M805 100 V130 H90 V158" marker-end="url(#arr)"/>
+            <rect class="dg-box acc" x="10" y="160" width="170" height="70" rx="8"/><text class="dg-t" x="24" y="188">Measure</text><text class="dg-s" x="24" y="208">NumPy: RMS, dBFS,</text><text class="dg-s" x="24" y="222">FFT, framing</text>
+            <rect class="dg-box acc" x="210" y="160" width="170" height="70" rx="8"/><text class="dg-t" x="224" y="188">Process</text><text class="dg-s" x="224" y="208">SciPy: filters,</text><text class="dg-s" x="224" y="222">resampling, windows</text>
+            <rect class="dg-box acc" x="410" y="160" width="170" height="70" rx="8"/><text class="dg-t" x="424" y="188">Extract features</text><text class="dg-s" x="424" y="208">librosa: STFT, mel,</text><text class="dg-s" x="424" y="222">MFCC, f0</text>
+            <rect class="dg-box acc" x="610" y="160" width="140" height="70" rx="8"/><text class="dg-t" x="624" y="188">Visualise</text><text class="dg-s" x="624" y="208">Matplotlib</text><text class="dg-s" x="624" y="222">figures</text>
+            <rect class="dg-box" x="780" y="160" width="140" height="70" rx="8"/><text class="dg-t" x="794" y="188">Report</text><text class="dg-s" x="794" y="208">Jupyter notebook</text><text class="dg-s" x="794" y="222">code + results</text>
+            <line class="dg-l" x1="180" y1="195" x2="208" y2="195" marker-end="url(#arr)"/>
+            <line class="dg-l" x1="380" y1="195" x2="408" y2="195" marker-end="url(#arr)"/>
+            <line class="dg-l" x1="580" y1="195" x2="608" y2="195" marker-end="url(#arr)"/>
+            <line class="dg-l" x1="750" y1="195" x2="778" y2="195" marker-end="url(#arr)"/>
+          </g>
+        </svg>
+      </div>
+      <h3>Components of the stack</h3>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Component</th><th>Role</th><th>Typical call</th><th>Audiology example</th></tr></thead>
+        <tbody>
+          <tr><td>Python interpreter</td><td>Runs your code line by line</td><td><code>python</code>, a Jupyter kernel</td><td>Executes the analysis script</td></tr>
+          <tr><td>NumPy</td><td>N-dimensional arrays and fast maths</td><td><code>np.sin</code>, <code>np.fft.rfft</code></td><td>Generate a 1 kHz tone, compute RMS</td></tr>
+          <tr><td>SciPy</td><td>Signal processing, statistics, file I/O</td><td><code>signal.butter</code>, <code>wavfile.read</code></td><td>Band-limit speech to 300 to 3400 Hz</td></tr>
+          <tr><td>Matplotlib</td><td>2-D plotting</td><td><code>plt.plot</code>, <code>ax.set_xscale</code></td><td>Draw a waveform or an audiogram</td></tr>
+          <tr><td>librosa</td><td>Audio loading and music/speech features</td><td><code>librosa.load</code>, <code>feature.mfcc</code></td><td>Spectrogram and f0 of a speech sample</td></tr>
+          <tr><td>Jupyter</td><td>Interactive notebook environment</td><td>JupyterLab, VS Code, Google Colab</td><td>Lab record with code, plots and notes</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note"><span class="lbl">Key idea</span>Every stage after loading works on the same NumPy array. If you understand arrays, you understand how all the other libraries talk to each other.</div>
+    </section>
+
+    <!-- 03 FIRST LINES -->
+    <section class="mod" id="firstlines">
+      <div class="mod-head"><span class="mod-num">03</span><h2>Setup and the first two lines</h2></div>
+      <p>Install once, on a lab PC or a laptop. A clean way is the official Python installer from python.org or Miniconda, followed by one command in a terminal:</p>
+      <div class="cell" data-title="Terminal: install the stack (run once)" data-lang="shell">
+<pre class="code">pip install numpy scipy matplotlib librosa jupyterlab
+jupyter lab        # opens JupyterLab in your browser</pre>
+      </div>
+      <p>Almost every audio notebook starts with the same two lines. Here is what each part means.</p>
+      <div class="cell" data-title="The two standard imports">
+<pre class="code">import numpy as np
+import matplotlib.pyplot as plt
+
+print(np.pi, np.sqrt(2))</pre>
+<div class="out"><pre>3.141592653589793 1.4142135623730951</pre></div>
+      </div>
+      <ul class="lbl-list">
+        <li>
+          <div class="src">import numpy as np</div>
+          <div>
+            <p>Loads the NumPy library into memory and gives it the short name <code>np</code>. After this line, every NumPy tool is reached as <code>np.something</code>, for example <code>np.sin</code>, <code>np.mean</code> or <code>np.fft.rfft</code>.</p>
+            <p class="muted">Why a short name? You will type it hundreds of times. <code>np</code> is the universal convention, so code you find in papers, textbooks and forums will read the same as yours.</p>
+            <div class="tokens"><span class="tok"><b>import</b> Python keyword: load a module</span><span class="tok"><b>numpy</b> the package name</span><span class="tok"><b>as np</b> alias used in your code</span></div>
+          </div>
+        </li>
+        <li>
+          <div class="src">import matplotlib.pyplot as plt</div>
+          <div>
+            <p>Matplotlib is a large package. The dot reaches inside it to the <code>pyplot</code> submodule, the part that creates figures and draws lines, and names it <code>plt</code>. You then call <code>plt.plot</code>, <code>plt.xlabel</code>, <code>plt.show</code>.</p>
+            <p class="muted">You import only <code>pyplot</code> because that is the interface for making plots; the rest of Matplotlib works behind it.</p>
+            <div class="tokens"><span class="tok"><b>matplotlib</b> package</span><span class="tok"><b>.pyplot</b> submodule</span><span class="tok"><b>as plt</b> alias</span></div>
+          </div>
+        </li>
+        <li>
+          <div class="src">print(np.pi, np.sqrt(2))</div>
+          <div>
+            <p>A quick check that the import worked. <code>np.pi</code> is a constant stored inside NumPy; <code>np.sqrt</code> is a function. If NumPy were missing you would see <code>ModuleNotFoundError: No module named 'numpy'</code> instead.</p>
+          </div>
+        </li>
+      </ul>
+      <div class="note warn"><span class="lbl">Common error</span>Writing <code>np.sin(...)</code> before running the import cell gives <code>NameError: name 'np' is not defined</code>. In Jupyter, always run the import cell first after opening or restarting a notebook.</div>
+    </section>
+
+    <!-- 04 VARIABLES -->
+    <section class="mod" id="variables">
+      <div class="mod-head"><span class="mod-num">04</span><h2>Variables</h2></div>
+      <div class="wwh">
+        <div><h4>What</h4><p>A variable is a name attached to a value. <code>fs = 44100</code> stores the number 44100 under the name <code>fs</code>.</p></div>
+        <div><h4>Why</h4><p>Signal parameters (sampling rate, frequency, level) appear in many formulas. Naming them once avoids typing errors and makes code read like a test protocol.</p></div>
+        <div><h4>How</h4><p>Python infers the type from the value: whole numbers are <code>int</code>, decimals <code>float</code>, text <code>str</code>, yes/no <code>bool</code>.</p></div>
+      </div>
+      <div class="cell" data-title="Stimulus parameters as variables">
+<pre class="code">fs = 44100            # sampling rate in Hz (samples per second)
+duration = 0.5        # stimulus duration in seconds
+freq = 1000           # test frequency in Hz
+level_dbhl = 40       # presentation level in dB HL
+ear = "right"         # test ear
+masking_on = False    # contralateral masking switched off
+
+n_samples = int(fs * duration)   # how many samples the tone needs
+print(n_samples)
+print(type(fs), type(duration), type(ear), type(masking_on))</pre>
+<div class="out"><pre>22050
+&lt;class 'int'&gt; &lt;class 'float'&gt; &lt;class 'str'&gt; &lt;class 'bool'&gt;</pre></div>
+      </div>
+      <p>Collections hold several values. A dictionary maps keys to values, which suits an audiogram: frequency in Hz as the key, threshold in dB HL as the value.</p>
+      <div class="cell" data-title="An audiogram as a dictionary, and a pure-tone average">
+<pre class="code">audiogram_right = {250: 20, 500: 25, 1000: 30, 2000: 45, 4000: 60, 8000: 65}
+
+pta = (audiogram_right[500] + audiogram_right[1000] + audiogram_right[2000]) / 3
+print(f"PTA (0.5, 1, 2 kHz): {pta:.1f} dB HL")</pre>
+<div class="out"><pre>PTA (0.5, 1, 2 kHz): 33.3 dB HL</pre></div>
+      </div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Type</th><th>Example</th><th>Audiology use</th></tr></thead>
+        <tbody>
+          <tr><td><code>int</code></td><td><code>fs = 16000</code></td><td>Sampling rate, sample counts, FFT size</td></tr>
+          <tr><td><code>float</code></td><td><code>duration = 0.3</code></td><td>Seconds, dB values, amplitudes</td></tr>
+          <tr><td><code>str</code></td><td><code>ear = "left"</code></td><td>Labels, file names, patient codes</td></tr>
+          <tr><td><code>bool</code></td><td><code>masking_on = True</code></td><td>Switches in a protocol</td></tr>
+          <tr><td><code>list</code></td><td><code>[250, 500, 1000]</code></td><td>Ordered test frequencies</td></tr>
+          <tr><td><code>dict</code></td><td><code>{1000: 30}</code></td><td>Frequency to threshold look-up</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note"><span class="lbl">Naming habit</span>Put units in names when they matter: <code>dur_s</code>, <code>ramp_ms</code>, <code>level_dbhl</code>. It prevents the classic milliseconds-versus-seconds bug.</div>
+    </section>
+
+    <!-- 05 VECTORS -->
+    <section class="mod" id="vectors">
+      <div class="mod-head"><span class="mod-num">05</span><h2>Vectors: a signal is a 1-D array</h2></div>
+      <div class="wwh">
+        <div><h4>What</h4><p>A vector is an ordered list of numbers stored as a NumPy array with one dimension. A mono recording is exactly this: one number per sample.</p></div>
+        <div><h4>Why</h4><p>NumPy applies an operation to every element at once (vectorisation). Scaling 22 050 samples is one expression, with no loop to write.</p></div>
+        <div><h4>How</h4><p>Build a time axis <code>t = n / fs</code>, then compute the signal from it: <code>x = A sin(2&pi;ft)</code>.</p></div>
+      </div>
+      <div class="cell" data-plot="vec" data-title="Time vector, 1 kHz tone, RMS and dBFS">
+<pre class="code">t = np.arange(n_samples) / fs            # 0, 1/fs, 2/fs, ... seconds
+x = 0.5 * np.sin(2 * np.pi * freq * t)   # 1 kHz tone, peak amplitude 0.5
+
+print(t.shape, x.shape, x.dtype)
+print(t[:4])                             # first four time points
+
+rms = np.sqrt(np.mean(x**2))             # root-mean-square
+print(f"Peak = {np.max(np.abs(x)):.4f}")
+print(f"RMS  = {rms:.4f}")
+print(f"Level = {20*np.log10(rms):.2f} dBFS")
+
+plt.plot(t[:221] * 1000, x[:221])        # first 5 ms
+plt.xlabel("Time (ms)"); plt.ylabel("Amplitude")
+plt.show()</pre>
+<div class="out"><pre>(22050,) (22050,) float64
+[0.00000000e+00 2.26757370e-05 4.53514739e-05 6.80272109e-05]
+Peak = 0.5000
+RMS  = 0.3536
+Level = -9.03 dBFS</pre></div>
+      </div>
+      <h4>Reading the output</h4>
+      <ul>
+        <li><code>(22050,)</code> is the shape: one dimension with 22 050 elements. The trailing comma marks a 1-D shape.</li>
+        <li>Time steps are 1/44 100 s = 22.7 &micro;s apart, the sampling period.</li>
+        <li>RMS of a sine is peak / &radic;2, so 0.5 / 1.414 = 0.3536.</li>
+        <li><code>dBFS</code> is decibels relative to digital full scale (1.0). It is not dB SPL and not dB HL. Converting needs a calibration measurement.</li>
+      </ul>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Operation</th><th>Code</th><th>Meaning for a signal</th></tr></thead>
+        <tbody>
+          <tr><td>Gain</td><td><code>x * 2</code></td><td>+6.02 dB</td></tr>
+          <tr><td>Mix</td><td><code>x + noise</code></td><td>Sample-by-sample sum (same length needed)</td></tr>
+          <tr><td>Slice</td><td><code>x[:441]</code></td><td>First 10 ms at 44.1 kHz</td></tr>
+          <tr><td>Reverse</td><td><code>x[::-1]</code></td><td>Time reversal</td></tr>
+          <tr><td>Clip</td><td><code>np.clip(x, -1, 1)</code></td><td>Simulates hard peak clipping</td></tr>
+          <tr><td>Index of max</td><td><code>np.argmax(np.abs(x))</code></td><td>Sample where the peak occurs</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 06 MATRICES -->
+    <section class="mod" id="matrices">
+      <div class="mod-head"><span class="mod-num">06</span><h2>Matrices: 2-D arrays for channels, frames and results</h2></div>
+      <div class="wwh">
+        <div><h4>What</h4><p>A matrix is a 2-D array with rows and columns. Its <code>shape</code> is written (rows, columns).</p></div>
+        <div><h4>Why</h4><p>Stereo recordings, short-time frames, spectrograms and audiogram tables for both ears are all naturally two-dimensional.</p></div>
+        <div><h4>How</h4><p>Stack vectors with <code>np.column_stack</code> or <code>np.stack</code>. Reduce along a direction with <code>axis=0</code> (down rows) or <code>axis=1</code> (across columns).</p></div>
+      </div>
+      <div class="cell" data-title="Stereo signal and short-time framing">
+<pre class="code">stereo = np.column_stack([x, 0.25 * x])   # left full level, right -12 dB
+print(stereo.shape)
+print(stereo[:3].round(4))
+
+frame_len, hop = 1024, 512                 # 23.2 ms frames, 50 % overlap
+n_frames = 1 + (len(x) - frame_len) // hop
+frames = np.stack([x[i*hop : i*hop + frame_len] for i in range(n_frames)])
+print(frames.shape)</pre>
+<div class="out"><pre>(22050, 2)
+[[0.     0.    ]
+ [0.071  0.0177]
+ [0.1406 0.0351]]
+(42, 1024)</pre></div>
+      </div>
+      <div class="shape-demo" aria-hidden="true">
+        <figure><div class="mgrid" id="mgStereo"></div><figcaption>stereo: (samples, 2)</figcaption></figure>
+        <figure><div class="mgrid" id="mgFrames"></div><figcaption>frames: (42, 1024), one row per frame</figcaption></figure>
+      </div>
+      <p>Framing is the basis of every short-time analysis you will meet: spectrograms, LPC, MFCCs and hearing-aid processing all work on overlapping blocks of about 10 to 30 ms.</p>
+      <div class="cell" data-title="Both ears as one matrix">
+<pre class="code">freqs = np.array([250, 500, 1000, 2000, 4000, 8000])
+thr = np.array([[20, 25, 30, 45, 60, 65],     # row 0: right ear, dB HL
+                [15, 20, 30, 50, 75, 70]])    # row 1: left ear, dB HL
+
+print(thr.shape)
+print(thr.mean(axis=1).round(1))   # mean threshold per ear
+print(thr[:, 3])                   # both ears at 2 kHz (column 3)
+print(np.abs(thr[0] - thr[1]))     # interaural difference per frequency</pre>
+<div class="out"><pre>(2, 6)
+[40.8 43.3]
+[45 50]
+[ 5  5  0  5 15  5]</pre></div>
+      </div>
+      <p>The 15 dB interaural difference at 4 kHz stands out immediately. Matrix operations make screening a whole clinic's data set for asymmetry a few lines of code.</p>
+    </section>
+
+    <!-- 07 FUNCTIONS -->
+    <section class="mod" id="functions">
+      <div class="mod-head"><span class="mod-num">07</span><h2>Functions</h2></div>
+      <div class="wwh">
+        <div><h4>What</h4><p>A named, reusable block of code that takes inputs (arguments) and returns an output.</p></div>
+        <div><h4>Why</h4><p>You will generate tones and measure levels many times. A tested function removes copy-paste errors and documents the method.</p></div>
+        <div><h4>How</h4><p>Define with <code>def</code>, indent the body, end with <code>return</code>. Default values make arguments optional.</p></div>
+      </div>
+      <div class="cell" data-plot="ramp" data-title="Tone generator with raised-cosine ramps">
+<pre class="code">def make_tone(freq_hz, dur_s, fs=44100, amp=0.5, ramp_ms=10):
+    """Pure tone with raised-cosine onset and offset ramps."""
+    t = np.arange(int(fs * dur_s)) / fs
+    tone = amp * np.sin(2 * np.pi * freq_hz * t)
+    n_ramp = int(fs * ramp_ms / 1000)
+    ramp = 0.5 * (1 - np.cos(np.pi * np.arange(n_ramp) / n_ramp))
+    tone[:n_ramp] *= ramp            # fade in
+    tone[-n_ramp:] *= ramp[::-1]     # fade out
+    return tone
+
+def rms(sig):
+    return np.sqrt(np.mean(sig**2))
+
+def dbfs(sig):
+    return 20 * np.log10(rms(sig))
+
+tone = make_tone(2000, 0.3)
+print(len(tone), f"{dbfs(tone):.2f} dBFS")
+
+for f in [500, 1000, 4000]:
+    print(f, f"{dbfs(make_tone(f, 0.3, amp=0.1)):.2f}")
+
+plt.plot(np.arange(len(tone)) / 44100 * 1000, tone)
+plt.xlabel("Time (ms)"); plt.show()</pre>
+<div class="out"><pre>13230 -9.22 dBFS
+500 -23.20
+1000 -23.20
+4000 -23.20</pre></div>
+      </div>
+      <h4>Why the ramps?</h4>
+      <p>Switching a tone on abruptly spreads energy across many frequencies and is heard as a click. That spectral splatter would stimulate regions other than the test frequency. A short raised-cosine rise and fall keeps the energy near the nominal frequency, the same reason audiometers and evoked-potential systems shape their stimuli. The ramps also explain why the level is -9.22 dBFS, slightly below the -9.03 dBFS of the unramped tone.</p>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Part</th><th>In <code>make_tone</code></th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Name</td><td><code>make_tone</code></td><td>Verb-first names describe the action</td></tr>
+          <tr><td>Required arguments</td><td><code>freq_hz, dur_s</code></td><td>Must be supplied every call</td></tr>
+          <tr><td>Default arguments</td><td><code>fs=44100, amp=0.5, ramp_ms=10</code></td><td>Sensible values you can override</td></tr>
+          <tr><td>Docstring</td><td><code>"""Pure tone ..."""</code></td><td>Shown by <code>help(make_tone)</code></td></tr>
+          <tr><td>Return value</td><td><code>return tone</code></td><td>The array handed back to the caller</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 08 NUMPY -->
+    <section class="mod" id="numpy">
+      <div class="mod-head"><span class="mod-num">08</span><h2>NumPy: arrays, maths and the FFT</h2></div>
+      <p>NumPy (Numerical Python) supplies the <code>ndarray</code>, a block of numbers of one type stored contiguously in memory. Operations run in compiled C, which is why a one-second, 44.1 kHz signal can be processed in microseconds from a few lines of Python.</p>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Task</th><th>NumPy call</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>Evenly spaced samples</td><td><code>np.arange(n) / fs</code></td><td>Exact sample times</td></tr>
+          <tr><td>Fixed number of points</td><td><code>np.linspace(0, 1, 1000)</code></td><td>Includes end point by default</td></tr>
+          <tr><td>Silence</td><td><code>np.zeros(fs)</code></td><td>One second of zeros</td></tr>
+          <tr><td>White noise</td><td><code>np.random.default_rng(0).standard_normal(fs)</code></td><td>Seeded, so repeatable</td></tr>
+          <tr><td>Concatenate</td><td><code>np.concatenate([gap, tone, gap])</code></td><td>Build a stimulus sequence</td></tr>
+          <tr><td>Decibels</td><td><code>20 * np.log10(a / ref)</code></td><td>Amplitude ratio to dB</td></tr>
+          <tr><td>Spectrum</td><td><code>np.fft.rfft(x)</code>, <code>np.fft.rfftfreq(n, 1/fs)</code></td><td>Real-input FFT and its frequency axis</td></tr>
+          <tr><td>Window</td><td><code>np.hanning(n)</code></td><td>Reduces spectral leakage</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Algorithm: the discrete Fourier transform</h3>
+      <p>The FFT is a fast algorithm for the DFT, which re-expresses N time samples as N/2 + 1 frequency components for a real signal. Bin spacing (frequency resolution) is fs / N, so a longer analysis window gives finer resolution. Multiplying by a Hann window before the FFT tapers the edges of the segment and stops energy from leaking into neighbouring bins.</p>
+      <div class="cell" data-plot="fft" data-title="Spectrum of a two-tone signal">
+<pre class="code">sig = make_tone(1000, 0.5, amp=0.5) + make_tone(3000, 0.5, amp=0.1)
+N = len(sig)
+
+X = np.fft.rfft(sig * np.hanning(N))       # windowed FFT
+f = np.fft.rfftfreq(N, d=1/fs)             # frequency of each bin (Hz)
+mag = np.abs(X)
+mag_db = 20 * np.log10(mag / mag.max() + 1e-12)
+
+print(N, X.shape, f"{fs/N:.1f} Hz")
+print(f"Peak at {f[np.argmax(mag)]:.1f} Hz")
+i3 = np.argmin(np.abs(f - 3000))
+print(f"3 kHz component: {mag_db[i3]:.1f} dB re peak")
+
+plt.plot(f, mag_db); plt.xlim(0, 5000); plt.ylim(-100, 5)
+plt.xlabel("Frequency (Hz)"); plt.ylabel("Magnitude (dB re peak)")
+plt.show()</pre>
+<div class="out"><pre>22050 (11026,) 2.0 Hz
+Peak at 1000.0 Hz
+3 kHz component: -14.0 dB re peak</pre></div>
+      </div>
+      <p>The 3 kHz tone had one fifth of the amplitude, and 20 log<sub>10</sub>(0.1 / 0.5) = -14.0 dB. The spectrum recovers the level difference exactly.</p>
+    </section>
+
+    <!-- 09 SCIPY -->
+    <section class="mod" id="scipy">
+      <div class="mod-head"><span class="mod-num">09</span><h2>SciPy: filters and audio files</h2></div>
+      <p>SciPy builds on NumPy. The module you will use most is <code>scipy.signal</code> (filter design, filtering, spectrograms, resampling). <code>scipy.io.wavfile</code> reads and writes WAV files.</p>
+      <div class="wwh">
+        <div><h4>FIR filters</h4><p>Output is a weighted sum of past inputs only. Always stable, can have exactly linear phase, but need many coefficients. <code>signal.firwin</code>.</p></div>
+        <div><h4>IIR filters</h4><p>Output also feeds back past outputs. Sharp responses with few coefficients; phase is non-linear. <code>signal.butter</code>, <code>signal.iirnotch</code>.</p></div>
+        <div><h4>Second-order sections</h4><p>Use <code>output="sos"</code> for IIR filters above order 2. It splits the filter into stable biquads and avoids numerical errors.</p></div>
+      </div>
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sp-bp" type="button" role="tab" aria-controls="sp-bp" aria-selected="true">Band-pass (telephone band)</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#sp-notch" type="button" role="tab" aria-controls="sp-notch" aria-selected="false">50 Hz notch</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#sp-wav" type="button" role="tab" aria-controls="sp-wav" aria-selected="false">WAV read / write</button></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="sp-bp" role="tabpanel">
+          <div class="cell" data-plot="bp" data-title="4th-order Butterworth band-pass, 300 to 3400 Hz">
+<pre class="code">from scipy import signal
+
+sos = signal.butter(4, [300, 3400], btype="bandpass", fs=fs, output="sos")
+print(sos.shape)                     # 4 biquad sections x 6 coefficients
+
+w, h = signal.sosfreqz(sos, worN=[100, 300, 1000, 3400, 8000], fs=fs)
+for fw, hw in zip(w, h):
+    print(int(round(fw)), f"{20*np.log10(abs(hw)):.1f} dB")
+
+speech_band = signal.sosfiltfilt(sos, x)   # zero-phase filtering</pre>
+<div class="out"><pre>(4, 6)
+100 -41.0 dB
+300 -3.0 dB
+1000 -0.0 dB
+3400 -3.0 dB
+8000 -35.8 dB</pre></div>
+          </div>
+          <p>The cut-off frequencies sit exactly at -3 dB. 300 to 3400 Hz is the classic telephone bandwidth, useful for simulating what a patient hears in a tele-audiology call.</p>
+        </div>
+        <div class="tab-pane fade" id="sp-notch" role="tabpanel">
+          <div class="cell" data-plot="notch" data-title="Removing 50 Hz mains hum">
+<pre class="code">rng = np.random.default_rng(0)
+tt = np.arange(fs) / fs                          # 1 s time axis
+clean = make_tone(1000, 1.0, amp=0.3)
+hum = 0.2 * np.sin(2 * np.pi * 50 * tt)          # mains interference (India: 50 Hz)
+noisy = clean + hum + 0.02 * rng.standard_normal(fs)
+
+b, a = signal.iirnotch(50, Q=30, fs=fs)          # notch centred on 50 Hz
+cleaned = signal.filtfilt(b, a, noisy)
+
+def level_at(sig, f0):
+    S = np.abs(np.fft.rfft(sig * np.hanning(len(sig))))
+    ff = np.fft.rfftfreq(len(sig), 1/fs)
+    return 20 * np.log10(S[np.argmin(np.abs(ff - f0))])
+
+before, after = level_at(noisy, 50), level_at(cleaned, 50)
+print(f"50 Hz hum before: {before:.1f} dB, after notch: {after:.1f} dB")
+print(f"Reduction: {before - after:.1f} dB")</pre>
+<div class="out"><pre>50 Hz hum before: 66.9 dB, after notch: 41.9 dB
+Reduction: 25.0 dB</pre></div>
+          </div>
+          <p>Mains pickup is a daily problem in ABR and EEG recording. A narrow notch (high Q) removes it while leaving the 1 kHz component untouched. The plot shows the notch filter's magnitude response.</p>
+        </div>
+        <div class="tab-pane fade" id="sp-wav" role="tabpanel">
+          <div class="cell" data-title="Read a WAV file and write a calibrated test tone">
+<pre class="code">from scipy.io import wavfile
+
+fs_file, data = wavfile.read("speech_sample.wav")   # 16-bit PCM file
+print(fs_file, data.dtype, data.shape)
+
+x_speech = data.astype(np.float64) / 32768          # int16 to -1.0 ... +1.0
+
+out = make_tone(1000, 1.0, amp=0.5)
+wavfile.write("tone_1k.wav", 44100, (out * 32767).astype(np.int16))</pre>
+<div class="out"><pre>16000 int16 (32000,)      # example: a 2 s, 16 kHz mono recording</pre></div>
+          </div>
+          <div class="note warn"><span class="lbl">Scaling trap</span><code>wavfile.read</code> returns raw integers. A 16-bit file gives values up to 32 767, so RMS and dBFS will be wrong by about 90 dB unless you divide by 32 768 first. librosa does this conversion for you.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 MATPLOTLIB -->
+    <section class="mod" id="matplotlib">
+      <div class="mod-head"><span class="mod-num">10</span><h2>Matplotlib: waveforms, spectra and the audiogram</h2></div>
+      <p>Matplotlib draws on a <code>Figure</code> (the whole image) that contains one or more <code>Axes</code> (a single plot with its own x and y axes). The quick style <code>plt.plot(...)</code> draws on the current axes. The explicit style <code>fig, ax = plt.subplots()</code> gives you named objects, which is clearer for anything with more than one panel.</p>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Need</th><th>Call</th></tr></thead>
+        <tbody>
+          <tr><td>Line plot</td><td><code>ax.plot(t, x)</code></td></tr>
+          <tr><td>Log frequency axis</td><td><code>ax.set_xscale("log")</code></td></tr>
+          <tr><td>Reverse y axis (audiogram)</td><td><code>ax.set_ylim(120, -10)</code> or <code>ax.invert_yaxis()</code></td></tr>
+          <tr><td>Several panels</td><td><code>fig, axs = plt.subplots(2, 1, sharex=True)</code></td></tr>
+          <tr><td>Spectrogram image</td><td><code>ax.pcolormesh(t, f, S_db)</code> or <code>ax.specgram(x, Fs=fs)</code></td></tr>
+          <tr><td>Save for a report</td><td><code>fig.savefig("audiogram.png", dpi=300)</code></td></tr>
+        </tbody>
+      </table></div>
+      <div class="cell" data-plot="audiogram" data-title="A standard audiogram">
+<pre class="code">freqs = [250, 500, 1000, 2000, 4000, 8000]
+right = [20, 25, 30, 45, 60, 65]
+left  = [15, 20, 30, 50, 75, 70]
+
+fig, ax = plt.subplots(figsize=(6, 5))
+ax.plot(freqs, right, "o-", color="red", mfc="none", label="Right ear (AC)")
+ax.plot(freqs, left, "x-", color="blue", label="Left ear (AC)")
+
+ax.set_xscale("log")
+ax.set_xticks(freqs)
+ax.set_xticklabels(["250", "500", "1k", "2k", "4k", "8k"])
+ax.set_ylim(120, -10)                       # better hearing at the top
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("Hearing level (dB HL)")
+ax.grid(True, alpha=0.4)
+ax.legend(loc="lower left")
+plt.show()</pre>
+<div class="out"><pre></pre></div>
+      </div>
+      <p>The code follows audiogram convention: red circles for the right ear, blue crosses for the left, octave frequencies on a logarithmic axis and the dB HL axis increasing downward.</p>
+    </section>
+
+    <!-- 11 LIBROSA -->
+    <section class="mod" id="librosa">
+      <div class="mod-head"><span class="mod-num">11</span><h2>librosa: loading audio and extracting speech features</h2></div>
+      <p>librosa is an audio and music analysis library. It loads most audio formats straight into a float NumPy array and provides the time-frequency tools used in speech science: the short-time Fourier transform, mel spectrograms, MFCCs and pitch tracking.</p>
+      <div class="cell" data-title="Loading a recording">
+<pre class="code">import librosa
+
+y, sr = librosa.load("speech_sample.wav", sr=16000, mono=True)
+print(y.shape, sr, y.dtype, round(y.min(), 2), round(y.max(), 2))</pre>
+<div class="out"><pre>(32000,) 16000 float32 -0.61 0.58      # example output for a 2 s file</pre></div>
+      </div>
+      <div class="note warn"><span class="lbl">Default resampling</span>If you omit <code>sr</code>, librosa resamples every file to 22 050 Hz and mixes it to mono. Pass <code>sr=None</code> to keep the file's own rate. Report the rate you used in any lab write-up.</div>
+      <div class="cell" data-plot="spec" data-title="STFT spectrogram of a 200 Hz to 4 kHz sweep">
+<pre class="code">sr = 16000
+y = librosa.chirp(fmin=200, fmax=4000, sr=sr, duration=2.0)   # exponential sweep
+print(y.shape, sr)
+
+S = np.abs(librosa.stft(y, n_fft=512, hop_length=160))   # 32 ms window, 10 ms hop
+S_db = librosa.amplitude_to_db(S, ref=np.max)
+print(S.shape)                    # (frequency bins, frames)
+
+import librosa.display
+librosa.display.specshow(S_db, sr=sr, hop_length=160, x_axis="time", y_axis="hz")
+plt.colorbar(format="%+2.0f dB"); plt.show()</pre>
+<div class="out"><pre>(32000,) 16000
+(257, 201)</pre></div>
+      </div>
+      <h3>Algorithms behind the features</h3>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Feature</th><th>librosa call</th><th>How it is computed</th><th>Audiology use</th></tr></thead>
+        <tbody>
+          <tr><td>STFT</td><td><code>librosa.stft</code></td><td>Windowed FFT of overlapping frames</td><td>Spectrograms of speech and stimuli</td></tr>
+          <tr><td>Mel spectrogram</td><td><code>feature.melspectrogram</code></td><td>STFT power summed through triangular filters spaced on the mel scale</td><td>Approximates cochlear frequency resolution</td></tr>
+          <tr><td>MFCC</td><td><code>feature.mfcc</code></td><td>Log mel energies followed by a discrete cosine transform</td><td>Compact speech features for classifiers</td></tr>
+          <tr><td>f0 (pYIN)</td><td><code>librosa.pyin</code></td><td>Probabilistic YIN autocorrelation-style pitch tracker</td><td>Voice pitch, prosody, CI pitch studies</td></tr>
+          <tr><td>RMS energy</td><td><code>feature.rms</code></td><td>Frame-wise root-mean-square</td><td>Level contour, voice activity</td></tr>
+          <tr><td>Onsets</td><td><code>onset.onset_detect</code></td><td>Peaks in spectral flux</td><td>Segmenting words or clicks</td></tr>
+        </tbody>
+      </table></div>
+      <div class="cell" data-title="Mel spectrogram, MFCC and f0">
+<pre class="code">M = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=512, hop_length=160, n_mels=40)
+mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13, n_fft=512, hop_length=160)
+print(M.shape, mfcc.shape)
+
+# a synthetic voice-like signal: 150 Hz fundamental plus 9 harmonics
+t1 = np.arange(sr) / sr
+voice = 0.3 * sum(np.sin(2*np.pi*k*150*t1) / k for k in range(1, 11))
+f0, voiced, prob = librosa.pyin(voice, fmin=75, fmax=400, sr=sr,
+                                frame_length=1024, hop_length=160)
+print(f"median f0 = {np.nanmedian(f0):.1f} Hz")</pre>
+<div class="out"><pre>(40, 201) (13, 201)
+median f0 = 150.0 Hz</pre></div>
+      </div>
+    </section>
+
+    <!-- 12 JUPYTER -->
+    <section class="mod" id="jupyter">
+      <div class="mod-head"><span class="mod-num">12</span><h2>Jupyter: the notebook as a lab record</h2></div>
+      <p>A Jupyter notebook (<code>.ipynb</code>) is a document made of cells. Code cells run in a kernel, a live Python process that keeps variables in memory between cells. Markdown cells hold headings, explanations and equations. Outputs (numbers, tables, plots) are saved inside the file, so a notebook is both the analysis and its report. Every example on this page is laid out as a notebook cell.</p><div class="photos n1"><figure class="photo"><div class="frame"><img src="assets/img/jupyter-notebook-png.png" alt="A Jupyter notebook with code cells, In/Out prompts and results." loading="lazy" width="960" height="638"></div><figcaption><span>A Jupyter notebook with code cells, In/Out prompts and results.</span><span class="credit">Image: Andrey Yakimchik, <a href="https://commons.wikimedia.org/wiki/File:Jupyter_Notebook.png" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/licenses/by/4.0" target="_blank" rel="noopener">CC BY 4.0</a></span></figcaption></figure></div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Element</th><th>What it does</th><th>Tip</th></tr></thead>
+        <tbody>
+          <tr><td><code>In [3]:</code></td><td>Execution counter: the 3rd cell run in this session</td><td>Numbers out of order mean the notebook was run out of order</td></tr>
+          <tr><td>Shift + Enter</td><td>Run cell, move to next</td><td>The fastest way through a notebook</td></tr>
+          <tr><td>Kernel &gt; Restart &amp; Run All</td><td>Fresh process, runs top to bottom</td><td>Do this before submitting any lab work</td></tr>
+          <tr><td><code>%matplotlib inline</code></td><td>Shows plots under the cell</td><td>Default in current JupyterLab</td></tr>
+          <tr><td><code>%timeit rms(x)</code></td><td>Times a statement</td><td>Compare loop and vectorised code</td></tr>
+          <tr><td><code>IPython.display.Audio(x, rate=fs)</code></td><td>Embeds a playable audio widget</td><td>Listen to every stimulus you generate</td></tr>
+        </tbody>
+      </table></div>
+      <div class="cell" data-title="Listen inside the notebook">
+<pre class="code">from IPython.display import Audio
+Audio(make_tone(1000, 1.0, amp=0.2), rate=44100)</pre>
+<div class="out"><pre>[ audio player widget: 1.0 s ]</pre></div>
+      </div>
+      <div class="note"><span class="lbl">Try it on this page</span>Click Run on cells in a different order and watch the <code>In [n]</code> counters. This is exactly how hidden state creeps into a real notebook. Switch on Predict mode in the top bar to hide outputs until each cell is run.</div>
+      <h4>Where to run notebooks</h4>
+      <ul>
+        <li>JupyterLab on the lab PC (<code>jupyter lab</code> after installing).</li>
+        <li>VS Code with the Python and Jupyter extensions.</li>
+        <li>Google Colab in a browser, with NumPy, SciPy, Matplotlib and librosa preinstalled.</li>
+        <li>JupyterLite, which runs Python entirely inside the browser with no server, for classrooms without installation rights.</li>
+      </ul>
+    </section>
+
+    <!-- 13 LABS -->
+    <section class="mod" id="labs">
+      <div class="mod-head"><span class="mod-num">13</span><h2>Interactive demonstrations</h2></div>
+      <p>These two demonstrations run in your browser and mirror what students will code in practical P2 (ADC/DAC and aliasing). Use them on the projector before the lab, then ask students to reproduce each plot in Python.</p>
+
+      <div class="lab" id="labAlias">
+        <h3 style="margin-top:0">Sampling and aliasing</h3>
+        <p class="muted" style="font-size:.95rem">The grey curve is the continuous tone. Dots are the samples an ADC would take. The coloured curve is the tone a DAC would reconstruct from those samples. Push the tone above fs/2 and watch it fold back.</p>
+        <div class="lab-controls">
+          <div><label for="aFreq">Tone frequency: <output id="aFreqOut"></output></label><input type="range" class="form-range" id="aFreq" min="100" max="20000" step="50" value="3000"></div>
+          <div><label for="aFs">Sampling rate</label><select class="form-select" id="aFs"><option value="8000">8 000 Hz (narrowband telephony)</option><option value="16000" selected>16 000 Hz (wideband speech)</option><option value="22050">22 050 Hz (librosa default)</option><option value="44100">44 100 Hz (CD audio)</option></select></div>
+          <div><label for="aWin">Window shown: <output id="aWinOut"></output></label><input type="range" class="form-range" id="aWin" min="1" max="10" step="0.5" value="3"></div>
+        </div>
+        <canvas id="aliasCanvas" height="230" aria-label="Aliasing plot"></canvas>
+        <div class="legend"><span><i style="background:var(--plot-axis)"></i>Continuous tone</span><span><i style="background:var(--left)"></i>Samples</span><span><i style="background:var(--right)"></i>Reconstructed (what you hear)</span></div>
+        <div class="readout"><div><div class="k">Nyquist limit</div><div class="v" id="aNyq"></div></div><div><div class="k">Apparent frequency</div><div class="v" id="aApp"></div></div><div><div class="k">Samples per cycle</div><div class="v" id="aSpc"></div></div></div>
+        <div class="cell" data-title="Python equivalent">
+<pre class="code" id="aliasCode"></pre>
+        </div>
+      </div>
+
+      <div class="lab" id="labQuant">
+        <h3 style="margin-top:0">Quantisation and bit depth</h3>
+        <p class="muted" style="font-size:.95rem">Fewer bits means coarser amplitude steps and more quantisation noise. The theoretical signal-to-quantisation-noise ratio of a full-scale sine is 6.02 N + 1.76 dB.</p>
+        <div class="lab-controls">
+          <div><label for="qBits">Bit depth: <output id="qBitsOut"></output></label><input type="range" class="form-range" id="qBits" min="2" max="16" step="1" value="4"></div>
+          <div><label for="qAmp">Signal peak (fraction of full scale): <output id="qAmpOut"></output></label><input type="range" class="form-range" id="qAmp" min="0.05" max="1" step="0.05" value="1"></div>
+          <div><label for="qClip">Gain before ADC: <output id="qClipOut"></output></label><input type="range" class="form-range" id="qClip" min="0" max="12" step="1" value="0"></div>
+        </div>
+        <canvas id="quantCanvas" height="230" aria-label="Quantisation plot"></canvas>
+        <div class="legend"><span><i style="background:var(--plot-axis)"></i>Analog input</span><span><i style="background:var(--right)"></i>Quantised output</span></div>
+        <div class="readout"><div><div class="k">Levels available</div><div class="v" id="qLev"></div></div><div><div class="k">Theoretical SQNR</div><div class="v" id="qSq"></div></div><div><div class="k">Measured SQNR</div><div class="v" id="qMeas"></div></div><div><div class="k">Clipped samples</div><div class="v" id="qClipped"></div></div></div>
+      </div>
+    </section>
+
+    <!-- 14 CLINICAL -->
+    <section class="mod" id="clinical">
+      <div class="mod-head"><span class="mod-num">14</span><h2>Clinical and research applications</h2></div>
+      <div class="app-grid">
+        <div class="app"><h4>Stimulus generation and checking</h4><p>Pure tones, warble tones, narrow-band and speech-shaped noise, clicks and chirps with exact durations and ramps. Verify a stimulus from a device by recording and analysing it.</p><div class="libs"><span class="chip">NumPy</span><span class="chip">SciPy</span></div></div>
+        <div class="app"><h4>Calibration arithmetic</h4><p>Convert dBFS to dB SPL using a recorded calibrator tone, and track drift of a sound card or booth system over a semester.</p><div class="libs"><span class="chip">NumPy</span></div></div>
+        <div class="app"><h4>Speech-in-noise materials</h4><p>Mix sentences and noise at a precise SNR for adaptive or fixed-SNR speech tests, and check long-term spectra of the material.</p><div class="libs"><span class="chip">NumPy</span><span class="chip">librosa</span></div></div>
+        <div class="app"><h4>Evoked potential averaging</h4><p>Demonstrate why ABR needs thousands of sweeps: averaging N sweeps reduces random EEG noise by &radic;N.</p><div class="libs"><span class="chip">NumPy</span><span class="chip">Matplotlib</span></div></div>
+        <div class="app"><h4>Hearing-aid and CI simulation</h4><p>Filter banks, band gains, compression and noise-vocoder simulations of cochlear implant processing (practicals P6 and P7).</p><div class="libs"><span class="chip">SciPy</span></div></div>
+        <div class="app"><h4>Speech and voice analysis</h4><p>Spectrograms, f0, formant-related features and MFCCs for speech perception research and outcome measures.</p><div class="libs"><span class="chip">librosa</span></div></div>
+        <div class="app"><h4>Noise and room acoustics</h4><p>Leq from sound-level data, octave-band analysis, RT60 from a decay curve (practicals P10 and P11).</p><div class="libs"><span class="chip">NumPy</span><span class="chip">SciPy</span></div></div>
+        <div class="app"><h4>Clinical data analysis</h4><p>Audiogram databases, pure-tone averages, asymmetry screening, statistics and figures for dissertations.</p><div class="libs"><span class="chip">NumPy</span><span class="chip">Matplotlib</span></div></div>
+      </div>
+
+      <h3>Worked example 1: mixing speech and noise at a set SNR</h3>
+      <div class="cell" data-plot="snr" data-title="mix_at_snr: scale noise to reach a target SNR">
+<pre class="code">def mix_at_snr(speech, noise, snr_db):
+    """Scale noise so that 10*log10(P_speech / P_noise) equals snr_db."""
+    noise = noise[:len(speech)]
+    p_s = np.mean(speech**2)
+    p_n = np.mean(noise**2)
+    gain = np.sqrt(p_s / (p_n * 10**(snr_db / 10)))
+    return speech + gain * noise, gain
+
+speech = make_tone(1000, 1.0, amp=0.3)        # stand-in for a sentence
+noise = np.random.default_rng(0).standard_normal(44100)
+
+for snr in [10, 0, -5]:
+    mix, g = mix_at_snr(speech, noise, snr)
+    achieved = 10*np.log10(np.mean(speech**2) / np.mean((g*noise[:len(speech)])**2))
+    print(snr, f"{achieved:.2f}")</pre>
+<div class="out"><pre>10 10.00
+0 0.00
+-5 -5.00</pre></div>
+      </div>
+
+      <h3>Worked example 2: why ABR averaging works</h3>
+      <div class="cell" data-plot="abr" data-title="Signal averaging of a simulated ABR">
+<pre class="code">rng = np.random.default_rng(1)
+fs_abr = 20000
+t_ms = np.arange(0, 10, 1000/fs_abr)            # 10 ms epoch, 200 samples
+abr = (0.25*np.exp(-((t_ms-1.6)/0.25)**2)      # wave I   (microvolts)
+     + 0.30*np.exp(-((t_ms-3.8)/0.30)**2)      # wave III
+     + 0.50*np.exp(-((t_ms-5.7)/0.35)**2))     # wave V
+
+def average(n_sweeps, noise_uv=5.0):
+    sweeps = abr + noise_uv * rng.standard_normal((n_sweeps, len(t_ms)))
+    return sweeps.mean(axis=0)                 # matrix: one row per sweep
+
+for n in [1, 100, 2000]:
+    resid = np.std(average(n) - abr)
+    print(n, f"residual noise = {resid:.3f} uV, expected {5/np.sqrt(n):.3f} uV")</pre>
+<div class="out"><pre>1 residual noise = 4.622 uV, expected 5.000 uV
+100 residual noise = 0.498 uV, expected 0.500 uV
+2000 residual noise = 0.107 uV, expected 0.112 uV</pre></div>
+      </div>
+
+      <h3>Worked example 3: dBFS to dB SPL with a calibrator</h3>
+      <div class="cell" data-title="Calibrate a recording chain with a 94 dB SPL, 1 kHz calibrator">
+<pre class="code">cal = make_tone(1000, 2.0, amp=0.1)     # stands in for the recorded calibrator
+cal_dbfs = dbfs(cal)
+offset = 94.0 - cal_dbfs                # dB SPL that corresponds to 0 dBFS
+
+recording = make_tone(4000, 1.0, amp=0.02)
+print(f"calibrator: {cal_dbfs:.2f} dBFS, offset: {offset:.2f} dB")
+print(f"recording: {dbfs(recording):.2f} dBFS = {dbfs(recording) + offset:.1f} dB SPL")</pre>
+<div class="out"><pre>calibrator: -23.04 dBFS, offset: 117.04 dB
+recording: -37.04 dBFS = 80.0 dB SPL</pre></div>
+      </div>
+      <div class="note warn"><span class="lbl">Scope</span>The offset holds only for the same microphone, preamp gain, sound card and settings used during calibration, and it gives a flat (unweighted) level. dB HL additionally needs transducer-specific reference thresholds, which is the audiometer's job.</div>
+    </section>
+
+    <!-- 15 LIMITS -->
+    <section class="mod" id="limits">
+      <div class="mod-head"><span class="mod-num">15</span><h2>Limitations and pitfalls</h2></div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Limitation</th><th>What goes wrong</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td>Not a medical device</td><td>Scripts are not validated for diagnosis</td><td>Use for teaching, research and verification only; diagnose with calibrated clinical equipment</td></tr>
+          <tr><td>Digital level is not acoustic level</td><td>dBFS is treated as dB SPL or dB HL</td><td>Calibrate the full chain; state units on every axis</td></tr>
+          <tr><td>Consumer sound hardware</td><td>Laptops apply automatic gain, noise suppression and resampling</td><td>Use an external audio interface; disable enhancements; measure the output</td></tr>
+          <tr><td>Clipping on export</td><td>Values beyond &plusmn;1.0 wrap or clip when written as int16</td><td>Check <code>np.max(np.abs(x)) &lt; 1</code> before writing</td></tr>
+          <tr><td>Aliasing</td><td>Tones above fs/2 appear at the wrong frequency</td><td>Choose fs above twice the highest frequency; resample with <code>signal.resample_poly</code></td></tr>
+          <tr><td><code>log10(0)</code></td><td>Silence gives <code>-inf</code> dB and warnings</td><td>Add a tiny constant, for example <code>1e-12</code></td></tr>
+          <tr><td>Zero-phase filtering</td><td><code>filtfilt</code> needs the whole signal and doubles the effective order</td><td>Fine offline; use causal <code>sosfilt</code> to model a real-time device</td></tr>
+          <tr><td>Real-time latency</td><td>Python timing jitter is too large for a hearing-aid path (a few ms)</td><td>Prototype in Python; deploy on embedded DSP in C</td></tr>
+          <tr><td>Hidden notebook state</td><td>Results depend on cell run order</td><td>Restart and Run All before sharing</td></tr>
+          <tr><td>Version drift</td><td>Old tutorials fail on new library versions</td><td>Record versions with <code>pip freeze &gt; requirements.txt</code></td></tr>
+          <tr><td>Patient privacy</td><td>Voice recordings identify people</td><td>Anonymise file names and metadata; keep data on institutional storage, not public cloud notebooks</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 16 CURRENT -->
+    <section class="mod" id="current">
+      <div class="mod-head"><span class="mod-num">16</span><h2>Current developments</h2></div>
+      <ul>
+        <li>NumPy 2 (first released in 2024) cleaned up the API. Some older aliases, such as <code>np.NaN</code> and <code>np.Inf</code>, were removed, so code from older textbooks may need small edits (<code>np.nan</code>, <code>np.inf</code>).</li>
+        <li>Free-threaded CPython, which removes the global interpreter lock, arrived as an experimental build in Python 3.13 and became officially supported in 3.14. It opens the way to better multi-core performance for audio pipelines as libraries adopt it.</li>
+        <li>Python in the browser: Pyodide and JupyterLite run NumPy, SciPy and Matplotlib client-side, which helps classrooms without installation rights.</li>
+        <li>Deep learning for hearing: modern premium hearing aids include deep-neural-network noise reduction on dedicated chips. The models behind such features are typically researched and trained in Python with PyTorch and torchaudio.</li>
+        <li>Open challenges: the Clarity and Cadenza projects run machine-learning challenges on speech and music processing for listeners with hearing loss, with open Python baseline code (pyclarity) that students can study.</li>
+        <li>Open hearing-aid research platforms such as openMHA let researchers run real-time algorithms and control them from Python or MATLAB.</li>
+        <li>AI coding assistants now help students write and debug analysis code. The skills on this page remain essential for checking that generated code measures what it claims.</li>
+      </ul>
+    </section>
+
+    <!-- 17 PRACTICE -->
+    <section class="mod" id="practice">
+      <div class="mod-head"><span class="mod-num">17</span><h2>Exercises and quick reference</h2></div>
+      <h3 style="margin-top:0">Exercises</h3>
+      <div class="accordion" id="exAcc">
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ex1" aria-expanded="false" aria-controls="ex1">E1. A 4 kHz tone burst</button></h4>
+          <div id="ex1" class="accordion-collapse collapse" data-bs-parent="#exAcc"><div class="accordion-body">
+            <p>Generate a 250 ms, 4 kHz tone with 25 ms ramps and peak amplitude 0.5 using <code>make_tone</code>. Report its level in dBFS. Why is it lower than -9.03 dBFS?</p>
+            <div class="cell" data-title="Solution">
+<pre class="code">burst = make_tone(4000, 0.25, amp=0.5, ramp_ms=25)
+print(f"{dbfs(burst):.2f} dBFS")</pre>
+<div class="out"><pre>-9.61 dBFS</pre></div>
+            </div>
+            <p>The two 25 ms ramps occupy 20 % of the burst, reducing its average power.</p>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ex2" aria-expanded="false" aria-controls="ex2">E2. Prove aliasing with an FFT</button></h4>
+          <div id="ex2" class="accordion-collapse collapse" data-bs-parent="#exAcc"><div class="accordion-body">
+            <p>Sample a 30 kHz sine at 44 100 Hz for one second. Find the frequency of the FFT peak and explain it.</p>
+            <div class="cell" data-title="Solution">
+<pre class="code">fs = 44100
+x30 = np.sin(2 * np.pi * 30000 * np.arange(fs) / fs)
+X = np.abs(np.fft.rfft(x30 * np.hanning(fs)))
+f = np.fft.rfftfreq(fs, 1/fs)
+print(f[np.argmax(X)])</pre>
+<div class="out"><pre>14100.0</pre></div>
+            </div>
+            <p>30 kHz lies above the Nyquist limit of 22 050 Hz and folds to 44 100 - 30 000 = 14 100 Hz.</p>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ex3" aria-expanded="false" aria-controls="ex3">E3. Four-frequency PTA for both ears</button></h4>
+          <div id="ex3" class="accordion-collapse collapse" data-bs-parent="#exAcc"><div class="accordion-body">
+            <p>Using the <code>thr</code> matrix from section 06, compute the 0.5, 1, 2 and 4 kHz average for each ear in one line.</p>
+            <div class="cell" data-title="Solution">
+<pre class="code">pta4 = thr[:, 1:5].mean(axis=1)    # columns 1 to 4 are 500 to 4000 Hz
+print(pta4)</pre>
+<div class="out"><pre>[40.   43.75]</pre></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ex4" aria-expanded="false" aria-controls="ex4">E4. Octave-band noise centred on 1 kHz</button></h4>
+          <div id="ex4" class="accordion-collapse collapse" data-bs-parent="#exAcc"><div class="accordion-body">
+            <p>Filter one second of white noise with a 4th-order Butterworth band-pass from 707 to 1414 Hz. Plot its spectrum on a log frequency axis. This is the kind of narrow-band noise used for masking.</p>
+            <div class="cell" data-title="Starter code">
+<pre class="code">noise = np.random.default_rng(0).standard_normal(fs)
+sos = signal.butter(4, [707, 1414], btype="bandpass", fs=fs, output="sos")
+nbn = signal.sosfilt(sos, noise)
+# your turn: FFT, convert to dB, plot with ax.set_xscale("log")</pre>
+            </div>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ex5" aria-expanded="false" aria-controls="ex5">E5. Your own vowel</button></h4>
+          <div id="ex5" class="accordion-collapse collapse" data-bs-parent="#exAcc"><div class="accordion-body">
+            <p>Record a sustained /a/ for 2 s (Audacity, 16 kHz, 16-bit WAV). Load it with librosa, plot its spectrogram and estimate median f0 with <code>librosa.pyin</code>. Compare your f0 with the value Praat reports for the same file.</p>
+          </div></div>
+        </div>
+      </div>
+
+      <h3>Quick reference</h3>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>I want to</th><th>Code</th></tr></thead>
+        <tbody>
+          <tr><td>Time axis</td><td><code>t = np.arange(int(fs*dur)) / fs</code></td></tr>
+          <tr><td>Tone</td><td><code>A * np.sin(2*np.pi*f*t)</code></td></tr>
+          <tr><td>RMS and dBFS</td><td><code>20*np.log10(np.sqrt(np.mean(x**2)))</code></td></tr>
+          <tr><td>Gain in dB</td><td><code>x * 10**(g_db/20)</code></td></tr>
+          <tr><td>Spectrum</td><td><code>np.fft.rfft(x*np.hanning(len(x)))</code></td></tr>
+          <tr><td>Band-pass</td><td><code>signal.butter(4, [lo, hi], "bandpass", fs=fs, output="sos")</code></td></tr>
+          <tr><td>Apply filter</td><td><code>signal.sosfilt(sos, x)</code></td></tr>
+          <tr><td>Load audio</td><td><code>y, sr = librosa.load(path, sr=None)</code></td></tr>
+          <tr><td>Spectrogram</td><td><code>librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)</code></td></tr>
+          <tr><td>Save a figure</td><td><code>fig.savefig("fig.png", dpi=300)</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 18 FACULTY -->
+    <section class="mod" id="faculty">
+      <div class="mod-head"><span class="mod-num">18</span><h2>Faculty guide</h2></div>
+      <p>The plan follows the department's one-hour pattern: concept, architecture and signal flow, demonstration, clinical application, then a check.</p>
+      <div class="accordion" id="facAcc">
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#f1" aria-expanded="true" aria-controls="f1">Lecture 1: language core (sections 01 to 07)</button></h4>
+          <div id="f1" class="accordion-collapse collapse show" data-bs-parent="#facAcc"><div class="accordion-body">
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th>Time</th><th>Component</th><th>Activity</th></tr></thead>
+              <tbody>
+                <tr><td class="num">0 to 10 min</td><td>Concept</td><td>A recording is a list of numbers. Show the hero waveform at 250 Hz and 8 kHz.</td></tr>
+                <tr><td class="num">10 to 25 min</td><td>Architecture</td><td>Walk through the signal-flow diagram; map each block to a library.</td></tr>
+                <tr><td class="num">25 to 45 min</td><td>Demonstration</td><td>Live-run cells in sections 03 to 07 with Predict mode on.</td></tr>
+                <tr><td class="num">45 to 55 min</td><td>Clinical application</td><td>dBFS versus dB SPL versus dB HL; why stimuli need ramps.</td></tr>
+                <tr><td class="num">55 to 60 min</td><td>Check</td><td>Recap of variables, vectors and dBFS; one short exercise.</td></tr>
+              </tbody>
+            </table></div>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#f2" aria-expanded="false" aria-controls="f2">Lecture 2: scientific stack (sections 08 to 12)</button></h4>
+          <div id="f2" class="accordion-collapse collapse" data-bs-parent="#facAcc"><div class="accordion-body">
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th>Time</th><th>Component</th><th>Activity</th></tr></thead>
+              <tbody>
+                <tr><td class="num">0 to 10 min</td><td>Concept</td><td>Time domain versus frequency domain; frequency resolution fs/N.</td></tr>
+                <tr><td class="num">10 to 25 min</td><td>Architecture</td><td>FIR versus IIR, second-order sections, STFT framing.</td></tr>
+                <tr><td class="num">25 to 45 min</td><td>Demonstration</td><td>FFT, band-pass, notch, audiogram and spectrogram cells; aliasing demo.</td></tr>
+                <tr><td class="num">45 to 55 min</td><td>Clinical application</td><td>Mains hum in ABR, telephone bandwidth in tele-audiology, ABR averaging.</td></tr>
+                <tr><td class="num">55 to 60 min</td><td>Check</td><td>Recap of FFT resolution and filter design; assign exercises E2 and E4.</td></tr>
+              </tbody>
+            </table></div>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#f3" aria-expanded="false" aria-controls="f3">Two-hour lab mapped to practicals P2, P3 and P4</button></h4>
+          <div id="f3" class="accordion-collapse collapse" data-bs-parent="#facAcc"><div class="accordion-body">
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th>Practical</th><th>Task in Python</th><th>Evidence submitted</th></tr></thead>
+              <tbody>
+                <tr><td>P2 ADC/DAC and aliasing</td><td>Sample tones at 8, 16 and 44.1 kHz; quantise to 4, 8 and 16 bits</td><td>Notebook with waveform plots and a short explanation</td></tr>
+                <tr><td>P3 FIR vs IIR filtering</td><td><code>firwin</code> (101 taps) versus <code>butter</code> (order 4) band-pass; compare magnitude and phase</td><td>Response plots and design parameters</td></tr>
+                <tr><td>P4 Spectrogram and f0</td><td>Spectrogram and pYIN f0 of a recorded vowel; compare with Praat</td><td>Annotated figures and a comparison table</td></tr>
+              </tbody>
+            </table></div>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#f4" aria-expanded="false" aria-controls="f4">Assessment rubric for notebook submissions</button></h4>
+          <div id="f4" class="accordion-collapse collapse" data-bs-parent="#facAcc"><div class="accordion-body">
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th>Criterion</th><th>Weight</th><th>Full marks when</th></tr></thead>
+              <tbody>
+                <tr><td>Runs top to bottom</td><td class="num">20 %</td><td>Restart and Run All completes without errors</td></tr>
+                <tr><td>Correct signal parameters</td><td class="num">20 %</td><td>fs, durations and levels match the brief; units in variable names</td></tr>
+                <tr><td>Figures</td><td class="num">20 %</td><td>Labelled axes with units, legends, audiogram conventions followed</td></tr>
+                <tr><td>Interpretation</td><td class="num">30 %</td><td>Markdown cells explain results in audiological terms</td></tr>
+                <tr><td>Reproducibility</td><td class="num">10 %</td><td>Random seeds set, library versions recorded</td></tr>
+              </tbody>
+            </table></div>
+          </div></div>
+        </div>
+        <div class="accordion-item">
+          <h4 class="accordion-header" style="margin:0"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#f5" aria-expanded="false" aria-controls="f5">Lab preparation checklist and common student errors</button></h4>
+          <div id="f5" class="accordion-collapse collapse" data-bs-parent="#facAcc"><div class="accordion-body">
+            <ul>
+              <li>Install Python, NumPy, SciPy, Matplotlib, librosa and JupyterLab on every lab PC; test <code>import librosa</code>.</li>
+              <li>Prepare one common speech dataset (anonymised or synthetic) so results can be compared with Praat and Audacity.</li>
+              <li>Provide headphones and an external audio interface for listening checks; set a safe maximum output level.</li>
+              <li>Share a starter notebook containing the imports and the <code>make_tone</code>, <code>rms</code> and <code>dbfs</code> functions.</li>
+            </ul>
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th>Error message or symptom</th><th>Usual cause</th></tr></thead>
+              <tbody>
+                <tr><td><code>NameError: name 'np' is not defined</code></td><td>Import cell not run after a restart</td></tr>
+                <tr><td><code>ValueError: operands could not be broadcast together</code></td><td>Adding signals of different lengths</td></tr>
+                <tr><td><code>IndentationError</code></td><td>Mixed tabs and spaces inside a function</td></tr>
+                <tr><td>Level around +80 dBFS</td><td>int16 data not divided by 32 768</td></tr>
+                <tr><td>Tone sounds at the wrong pitch</td><td>Frequency above fs/2 (aliasing) or wrong fs passed to the player</td></tr>
+                <tr><td>Blank plot</td><td>Plotted before data was computed, or <code>plt.show()</code> missing in a script</td></tr>
+              </tbody>
+            </table></div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19 REFERENCES -->
+    <section class="mod" id="refs">
+      <div class="mod-head"><span class="mod-num">19</span><h2>References and documentation</h2></div>
+      <h4>Official documentation</h4>
+      <ul>
+        <li>Python tutorial: <a href="https://docs.python.org/3/tutorial/" target="_blank" rel="noopener">docs.python.org/3/tutorial</a></li>
+        <li>NumPy: <a href="https://numpy.org/doc/stable/" target="_blank" rel="noopener">numpy.org/doc/stable</a></li>
+        <li>SciPy signal processing: <a href="https://docs.scipy.org/doc/scipy/reference/signal.html" target="_blank" rel="noopener">docs.scipy.org/doc/scipy/reference/signal.html</a></li>
+        <li>Matplotlib: <a href="https://matplotlib.org/stable/" target="_blank" rel="noopener">matplotlib.org/stable</a></li>
+        <li>librosa: <a href="https://librosa.org/doc/latest/" target="_blank" rel="noopener">librosa.org/doc/latest</a></li>
+        <li>Project Jupyter: <a href="https://jupyter.org/" target="_blank" rel="noopener">jupyter.org</a>; JupyterLite: <a href="https://jupyterlite.readthedocs.io/" target="_blank" rel="noopener">jupyterlite.readthedocs.io</a></li>
+        <li>Clarity Project: <a href="https://claritychallenge.org/" target="_blank" rel="noopener">claritychallenge.org</a>; openMHA: <a href="https://www.openmha.org/" target="_blank" rel="noopener">openmha.org</a></li>
+      </ul>
+      <h4>Papers describing the libraries</h4>
+      <ul>
+        <li>Harris, C. R. et al. (2020). Array programming with NumPy. Nature, 585, 357 to 362.</li>
+        <li>Virtanen, P. et al. (2020). SciPy 1.0: fundamental algorithms for scientific computing in Python. Nature Methods, 17, 261 to 272.</li>
+        <li>Hunter, J. D. (2007). Matplotlib: a 2D graphics environment. Computing in Science and Engineering, 9(3), 90 to 95.</li>
+        <li>McFee, B. et al. (2015). librosa: audio and music signal analysis in Python. Proceedings of the 14th Python in Science Conference.</li>
+      </ul>
+      <h4>Textbooks from the course reading list</h4>
+      <ul>
+        <li>Oppenheim, A. V. and Schafer, R. W. Discrete-Time Signal Processing.</li>
+        <li>Rabiner, L. R. and Schafer, R. W. Theory and Applications of Digital Speech Processing.</li>
+        <li>Kates, J. M. Digital Hearing Aids.</li>
+        <li>Dillon, H. Hearing Aids.</li>
+      </ul>
+    </section>
+
+    <section class="mod" id="credits" data-short="Picture credits"><div class="mod-head"><span class="mod-num">20</span><h2>Picture credits</h2></div><p>Photographs and figures are from Wikimedia Commons and are public domain or openly licensed. They are reproduced unchanged except for resizing and are credited below with author, source and licence, as each licence requires. Diagrams without a credit were drawn for these notes.</p><ol class="credits-list"><li>py: Jupyter Notebook. <span class="muted">Andrey Yakimchik, <a href="https://commons.wikimedia.org/wiki/File:Jupyter_Notebook.png" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/licenses/by/4.0" target="_blank" rel="noopener">CC BY 4.0</a></span></li></ol></section><div class="pager"><a href="unit6.html">&larr; Unit 6</a><span></span></div>
+    <footer>
+      <p>Technology in Audiology: lecture notes for M.Sc. Audiology, prepared from the departmental teaching plan (Units 1 to 5) with supplementary topics and Unit 6. Typical values are given for teaching; always check device manuals and the current licensed editions of standards before clinical or calibration use.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/bootstrap.bundle.min.js"></script>
+<script src="assets/site.js"></script>
+<script src="assets/python.js"></script>
+</body>
+</html>
