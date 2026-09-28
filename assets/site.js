@@ -109,6 +109,12 @@ const MODS = new Set("np plt signal wavfile librosa Audio".split(" "));
 const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 function highlight(src, lang){
   if(lang === "shell") return esc(src).replace(/(#[^\n]*)/g, '<span class="tk-com">$1</span>');
+  if(lang === "matlab" || lang === "praat"){
+    const cm = lang === "matlab" ? "%" : "#";
+    return src.split("\n").map(line => { const i = line.indexOf(cm); const q = line.slice(0, i < 0 ? line.length : i);
+      let h = esc(q).replace(/(&#39;|')(?:[^'\n])*?'|"(?:[^"\n])*"/g, m => '<span class="tk-str">' + m + '</span>').replace(/\b(\d+\.?\d*(?:e[-+]?\d+)?)\b/g, '<span class="tk-num">$1</span>');
+      return h + (i < 0 ? "" : '<span class="tk-com">' + esc(line.slice(i)) + '</span>'); }).join("\n");
+  }
   const re = /(#[^\n]*)|("""[\s\S]*?"""|[rbf]?"(?:[^"\\\n]|\\.)*"|[rbf]?'(?:[^'\\\n]|\\.)*')|(\b\d+\.?\d*(?:e[-+]?\d+)?\b)|(\b[A-Za-z_]\w*\b)/g;
   let out = "", last = 0, m, prevDef = false;
   while((m = re.exec(src))){
