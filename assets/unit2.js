@@ -1185,3 +1185,399 @@
     }
   });
 })();
+
+/* Unit 2.13 demos: fetch-decode-execute stepper, MCU duty-cycle battery life, transistor counts */
+(function(){
+  const {plot, css} = window.AT;
+  const q = (el, s) => el.querySelector(s);
+
+  function setup(cv){
+    const w = cv.clientWidth; if(!w) return null;
+    const h = +(cv.dataset.h || 200), dpr = window.devicePixelRatio || 1;
+    cv.style.height = h + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    return {ctx, w, h};
+  }
+  const MONO = "12px 'JetBrains Mono', ui-monospace, monospace";
+  const MONO_S = "11px 'JetBrains Mono', ui-monospace, monospace";
+  const DISP = "600 12px 'Schibsted Grotesk', Arial, sans-serif";
+  const hex2 = v => v.toString(16).toUpperCase().padStart(2, "0");
+
+  /* ---------- 1. fetch, decode, execute ---------- */
+  const OPS = ["HLT", "LDA", "ADD", "SUB", "STA", "OUT", "JZ", "JMP"];
+  const HAS_ADDR = [false, true, true, true, true, false, true, true];
+  const PROGS = {
+    levels: {mem: [0x1C, 0x50, 0x66, 0x3D, 0x4C, 0x71, 0x00, 0, 0, 0, 0, 0, 60, 10, 0, 0], data: [12, 13],
+      notes: {12: "level (dB HL)", 13: "step (dB)"}},
+    sum: {mem: [0x1A, 0x2B, 0x2C, 0x4D, 0x50, 0x00, 0, 0, 0, 0, 25, 30, 5, 0, 0, 0], data: [10, 11, 12, 13],
+      notes: {10: "offset A", 11: "offset B", 12: "offset C", 13: "result"}}
+  };
+  function disasm(v, isData){
+    if(isData) return "data " + v;
+    const op = v >> 4, a = v & 15;
+    if(op > 7) return "data " + v;
+    return HAS_ADDR[op] ? OPS[op] + " " + a : OPS[op];
+  }
+  function fresh(name){
+    const p = PROGS[name];
+    return {name, mem: p.mem.slice(), pc: 0, ir: null, acc: 0, z: 0, mar: null, mdr: null,
+      phase: "ready", cycles: 0, count: 0, out: [], halted: false, touched: null, msg: "Ready. Press Step phase to fetch the first instruction."};
+  }
+  function stepPhase(s){
+    if(s.halted) { s.msg = "Halted. Press Reset to start again."; return; }
+    if(s.phase === "ready" || s.phase === "execute"){
+      s.mar = s.pc; s.mdr = s.mem[s.pc]; s.ir = s.mdr; s.touched = {addr: s.mar, kind: "fetch"};
+      s.msg = "Fetch: MAR ← PC (" + s.pc + "), MDR ← memory[" + s.pc + "] = " + hex2(s.mdr) + ", IR ← MDR, PC ← PC + 1.";
+      s.pc = (s.pc + 1) % 16; s.phase = "fetch"; s.cycles++;
+    } else if(s.phase === "fetch"){
+      const op = s.ir >> 4, a = s.ir & 15;
+      s.touched = null;
+      s.msg = "Decode: IR = " + hex2(s.ir) + " = binary " + (s.ir >> 4).toString(2).padStart(4, "0") + " " + a.toString(2).padStart(4, "0") +
+        ": opcode " + op + " (" + OPS[op] + ")" + (HAS_ADDR[op] ? ", operand address " + a + "." : ", no operand.");
+      s.phase = "decode"; s.cycles++;
+    } else if(s.phase === "decode"){
+      const op = s.ir >> 4, a = s.ir & 15;
+      s.touched = null; s.cycles++; s.count++; s.phase = "execute";
+      switch(op){
+        case 0: s.halted = true; s.msg = "Execute HLT: the processor stops."; break;
+        case 1: s.mar = a; s.mdr = s.mem[a]; s.acc = s.mdr; s.z = +(s.acc === 0); s.touched = {addr: a, kind: "read"};
+          s.msg = "Execute LDA " + a + ": ACC ← memory[" + a + "] = " + s.acc + "; Z = " + s.z + "."; break;
+        case 2: s.mar = a; s.mdr = s.mem[a]; s.acc = (s.acc + s.mdr) & 255; s.z = +(s.acc === 0); s.touched = {addr: a, kind: "read"};
+          s.msg = "Execute ADD " + a + ": ALU adds memory[" + a + "] = " + s.mdr + "; ACC = " + s.acc + "; Z = " + s.z + "."; break;
+        case 3: s.mar = a; s.mdr = s.mem[a]; s.acc = (s.acc - s.mdr + 256) & 255; s.z = +(s.acc === 0); s.touched = {addr: a, kind: "read"};
+          s.msg = "Execute SUB " + a + ": ALU subtracts memory[" + a + "] = " + s.mdr + "; ACC = " + s.acc + "; Z = " + s.z + "."; break;
+        case 4: s.mar = a; s.mdr = s.acc; s.mem[a] = s.acc; s.touched = {addr: a, kind: "write"};
+          s.msg = "Execute STA " + a + ": memory[" + a + "] ← ACC = " + s.acc + "."; break;
+        case 5: s.out.push(s.acc);
+          s.msg = "Execute OUT: ACC = " + s.acc + " is written to the output port (attenuator)."; break;
+        case 6: if(s.z){ s.pc = a; s.msg = "Execute JZ " + a + ": Z = 1, so PC ← " + a + " (jump taken)."; }
+          else s.msg = "Execute JZ " + a + ": Z = 0, so the jump is not taken; PC stays " + s.pc + "."; break;
+        case 7: s.pc = a; s.msg = "Execute JMP " + a + ": PC ← " + a + "."; break;
+        default: s.halted = true; s.msg = "Unknown opcode: halted.";
+      }
+    }
+  }
+
+  AT.demo("u2-13-fde", {
+    init(el){
+      el._s = fresh(q(el, "#u2-13-fde-prog").value);
+      const redraw = () => this.draw(el);
+      q(el, "#u2-13-fde-prog").addEventListener("change", () => { el._s = fresh(q(el, "#u2-13-fde-prog").value); redraw(); });
+      q(el, "#u2-13-fde-reset").addEventListener("click", () => { el._s = fresh(q(el, "#u2-13-fde-prog").value); redraw(); });
+      q(el, "#u2-13-fde-step").addEventListener("click", () => { stepPhase(el._s); redraw(); });
+      q(el, "#u2-13-fde-instr").addEventListener("click", () => {
+        const s = el._s; let guard = 0;
+        do { stepPhase(s); guard++; } while(!s.halted && s.phase !== "execute" && guard < 5);
+        redraw();
+      });
+      q(el, "#u2-13-fde-run").addEventListener("click", () => {
+        const s = el._s; let guard = 0;
+        while(!s.halted && guard < 3000){ stepPhase(s); guard++; }
+        if(!s.halted) s.msg = "Stopped after 3000 phases (program did not halt).";
+        else s.msg = "Ran to HLT. Output port received: " + (s.out.length ? s.out.join(", ") : "nothing") + ".";
+        redraw();
+      });
+    },
+    draw(el){
+      const s = el._s || (el._s = fresh("levels"));
+      q(el, "#u2-13-fde-ph").textContent = s.halted ? "halted" : s.phase;
+      q(el, "#u2-13-fde-cy").textContent = s.cycles;
+      q(el, "#u2-13-fde-n").textContent = s.count;
+      q(el, "#u2-13-fde-t").textContent = s.cycles + " µs";
+      q(el, "#u2-13-fde-msg").textContent = s.msg;
+      const cv = q(el, "canvas"), st = setup(cv); if(!st) return;
+      const {ctx, w, h} = st;
+      const ink = css("--ink"), muted = css("--muted"), acc = css("--accent"), red = css("--right"), blue = css("--left"),
+        warn = css("--warn"), rule = css("--plot-grid") || muted, surf = css("--surface");
+      const prog = PROGS[s.name];
+      const narrow = w < 560;
+      // memory table
+      const mx = 8, my = 22, rowH = (h - my - 8) / 16, mw = narrow ? w * 0.52 : Math.min(330, w * 0.42);
+      ctx.font = DISP; ctx.fillStyle = muted; ctx.textAlign = "left";
+      ctx.fillText("Memory (address: hex, meaning)", mx, 14);
+      for(let i = 0; i < 16; i++){
+        const y = my + i * rowH;
+        const isData = prog.data.indexOf(i) >= 0;
+        let fill = null;
+        if(s.touched && s.touched.addr === i) fill = s.touched.kind === "write" ? red : (s.touched.kind === "read" ? blue : acc);
+        if(fill){ ctx.globalAlpha = 0.18; ctx.fillStyle = fill; ctx.fillRect(mx, y, mw, rowH - 1); ctx.globalAlpha = 1; }
+        if(!s.halted && i === s.pc){ ctx.strokeStyle = acc; ctx.lineWidth = 2; ctx.strokeRect(mx + 1, y + 1, mw - 2, rowH - 3); }
+        ctx.strokeStyle = rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(mx, y + rowH - 0.5); ctx.lineTo(mx + mw, y + rowH - 0.5); ctx.stroke();
+        ctx.font = MONO_S; ctx.fillStyle = muted; ctx.fillText(String(i).padStart(2, " "), mx + 4, y + rowH * 0.7);
+        ctx.fillStyle = ink; ctx.fillText(hex2(s.mem[i]), mx + 30, y + rowH * 0.7);
+        const note = prog.notes[i];
+        const txt = disasm(s.mem[i], isData) + (note && !narrow ? "  (" + note + ")" : "");
+        ctx.fillStyle = isData ? warn : ink; ctx.fillText(txt, mx + 58, y + rowH * 0.7);
+      }
+      // registers
+      const rx = mx + mw + 18, rw = w - rx - 8;
+      const regs = [
+        ["PC", s.pc, "next instruction address"],
+        ["MAR", s.mar === null ? "-" : s.mar, "memory address register"],
+        ["MDR", s.mdr === null ? "-" : hex2(s.mdr), "memory data register"],
+        ["IR", s.ir === null ? "-" : hex2(s.ir) + " " + disasm(s.ir, false), "instruction register"],
+        ["ACC", s.acc, "accumulator"],
+        ["Z", s.z, "zero flag"]
+      ];
+      ctx.font = DISP; ctx.fillStyle = muted; ctx.fillText("CPU registers", rx, 14);
+      const bh = 30;
+      regs.forEach((r, k) => {
+        const y = my + k * (bh + 6);
+        ctx.fillStyle = surf; ctx.fillRect(rx, y, rw, bh);
+        ctx.strokeStyle = k === 0 ? acc : (k === 3 ? blue : muted); ctx.lineWidth = 1.2; ctx.strokeRect(rx + 0.5, y + 0.5, rw - 1, bh - 1);
+        ctx.font = DISP; ctx.fillStyle = ink; ctx.fillText(r[0], rx + 8, y + 19);
+        ctx.font = MONO; ctx.fillText(String(r[1]), rx + 48, y + 19);
+        if(rw > 250){ ctx.font = MONO_S; ctx.fillStyle = muted; ctx.textAlign = "right"; ctx.fillText(r[2], rx + rw - 8, y + 19); ctx.textAlign = "left"; }
+      });
+      // phase indicator
+      const py = my + 6 * (bh + 6) + 8;
+      const phases = ["fetch", "decode", "execute"];
+      const pw = (rw - 16) / 3;
+      phases.forEach((p, k) => {
+        const x = rx + k * (pw + 8), on = !s.halted && s.phase === p;
+        ctx.fillStyle = on ? acc : surf; ctx.globalAlpha = on ? 0.25 : 1; ctx.fillRect(x, py, pw, 26); ctx.globalAlpha = 1;
+        ctx.strokeStyle = on ? acc : muted; ctx.strokeRect(x + 0.5, py + 0.5, pw - 1, 25);
+        ctx.font = pw < 70 ? "600 10px 'Schibsted Grotesk', Arial, sans-serif" : DISP; ctx.fillStyle = on ? ink : muted; ctx.textAlign = "center"; ctx.fillText(pw < 55 ? p.slice(0, 3) : p, x + pw / 2, py + 17); ctx.textAlign = "left";
+      });
+      // output port
+      const oy = py + 40;
+      ctx.font = DISP; ctx.fillStyle = muted; ctx.fillText("Output port (attenuator)", rx, oy);
+      ctx.font = MONO; ctx.fillStyle = s.out.length ? red : muted;
+      let line = s.out.length ? s.out.join("  ") : "(nothing yet)";
+      const maxc = Math.max(8, Math.floor(rw / 7.4));
+      if(line.length > maxc) line = "…" + line.slice(line.length - maxc + 1);
+      ctx.fillText(line, rx, oy + 20);
+      if(s.halted){ ctx.font = DISP; ctx.fillStyle = red; ctx.fillText("HALTED", rx, oy + 42); }
+    }
+  });
+
+  /* ---------- 2. duty cycle and battery life ---------- */
+  AT.demo("u2-13-bat", {
+    init(el){ el.querySelectorAll("input").forEach(i => i.addEventListener("input", () => this.draw(el))); },
+    draw(el){
+      const C = +q(el, "#u2-13-bat-cap").value;
+      const Ia = +q(el, "#u2-13-bat-aud").value;
+      const Iact = +q(el, "#u2-13-bat-act").value;
+      const Islp = +q(el, "#u2-13-bat-slp").value / 1000;
+      const Dpc = Math.pow(10, +q(el, "#u2-13-bat-d").value);
+      const H = +q(el, "#u2-13-bat-h").value;
+      const D = Dpc / 100;
+      const iavg = d => Ia + d * Iact + (1 - d) * Islp;
+      const I = iavg(D), hours = C / I, days = hours / H;
+      const fmtPct = v => v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : v.toFixed(0);
+      q(el, "#u2-13-bat-cap-o").textContent = C + " mAh";
+      q(el, "#u2-13-bat-aud-o").textContent = Ia.toFixed(1) + " mA";
+      q(el, "#u2-13-bat-act-o").textContent = Iact.toFixed(1) + " mA";
+      q(el, "#u2-13-bat-slp-o").textContent = (Islp * 1000).toFixed(1) + " µA";
+      q(el, "#u2-13-bat-d-o").textContent = fmtPct(Dpc) + " %";
+      q(el, "#u2-13-bat-h-o").textContent = H + " h";
+      q(el, "#u2-13-bat-i").textContent = I.toFixed(3) + " mA";
+      q(el, "#u2-13-bat-share").textContent = ((I - Ia) / I * 100).toFixed(1) + " %";
+      q(el, "#u2-13-bat-lh").textContent = hours.toFixed(1) + " h";
+      q(el, "#u2-13-bat-ld").textContent = days.toFixed(1) + " days";
+      const x = [], y = [];
+      for(let e = -1; e <= 2.0001; e += 0.02){ const p = Math.pow(10, e); x.push(p); y.push(C / iavg(p / 100) / H); }
+      const ceil = C / Ia / H;
+      const ymax = Math.ceil(ceil * 1.15 / 2) * 2;
+      plot(q(el, "canvas"), {
+        xlim: [0.1, 100], ylim: [0, ymax], xlog: true,
+        xticks: [[0.1, "0.1"], [1, "1"], [10, "10"], [100, "100"]],
+        xlabel: "MCU duty cycle (% of time active, log scale)", ylabel: "Battery life (days)",
+        series: [
+          {x: [0.1, 100], y: [ceil, ceil], color: "--plot-axis", width: 1, dash: [4, 4]},
+          {x, y, color: "--accent", width: 2},
+          {x: [Dpc], y: [days], color: "--right", marker: "o", line: false, msize: 5}
+        ],
+        labels: [{text: days.toFixed(1) + " days", x: Dpc, y: days, dx: Dpc > 20 ? -8 : 8, dy: -10, color: "--right", align: Dpc > 20 ? "right" : "left"}]
+      });
+    }
+  });
+
+  /* ---------- 3. transistor counts ---------- */
+  const CHIPS = [
+    ["Intel 4004", 1971, 2300], ["Intel 8008", 1972, 3500], ["Intel 8080", 1974, 6000], ["Motorola 6800", 1974, 4100],
+    ["MOS 6502", 1975, 4528], ["Zilog Z80", 1976, 8500], ["Intel 8086", 1978, 29000], ["Intel 8051", 1980, 50000],
+    ["Intel 80286", 1982, 134000], ["ARM1", 1985, 25000], ["Intel 80386", 1985, 275000], ["Intel 80486", 1989, 1180235],
+    ["Pentium", 1993, 3100000], ["Pentium Pro", 1995, 5500000], ["Pentium 4", 2000, 42000000], ["Core 2 Duo", 2006, 291000000],
+    ["Apple A7", 2013, 1e9], ["Apple A12", 2018, 6.9e9], ["Apple M1", 2020, 16e9], ["Nvidia GH100", 2022, 80e9],
+    ["Apple M1 Ultra", 2022, 114e9], ["Apple M3", 2023, 25e9], ["Apple M4", 2024, 28e9]
+  ];
+  const LABELLED = ["Intel 4004", "Intel 8086", "ARM1", "Pentium", "Core 2 Duo", "Apple M1 Ultra"];
+  const fmtN = n => {
+    if(n >= 1e9) return (n / 1e9).toPrecision(3).replace(/\.?0+$/, "") + " billion";
+    if(n >= 1e6) return (n / 1e6).toPrecision(3).replace(/\.?0+$/, "") + " million";
+    return Math.round(n).toLocaleString("en-GB");
+  };
+  AT.demo("u2-13-moore", {
+    init(el){ el.querySelectorAll("input,select").forEach(i => i.addEventListener("input", () => this.draw(el))); },
+    draw(el){
+      const T = +q(el, "#u2-13-moore-dbl").value;
+      const Y = +q(el, "#u2-13-moore-yr").value;
+      const showLab = q(el, "#u2-13-moore-lab").value === "some";
+      q(el, "#u2-13-moore-dbl-o").textContent = T.toFixed(1) + " years";
+      q(el, "#u2-13-moore-yr-o").textContent = Y;
+      const pred = yr => 2300 * Math.pow(2, (yr - 1971) / T);
+      let best = CHIPS[0];
+      CHIPS.forEach(c => { if(Math.abs(c[1] - Y) < Math.abs(best[1] - Y) || (Math.abs(c[1] - Y) === Math.abs(best[1] - Y) && c[2] > best[2])) best = c; });
+      const p = pred(Y), pb = pred(best[1]);
+      q(el, "#u2-13-moore-p").textContent = fmtN(p);
+      q(el, "#u2-13-moore-c").textContent = best[0] + " (" + best[1] + "): " + fmtN(best[2]);
+      const ratio = best[2] / pb;
+      q(el, "#u2-13-moore-r").textContent = (ratio >= 10 || ratio < 0.1 ? ratio.toExponential(1) : ratio.toFixed(2)) + " (at " + best[1] + ")";
+      const lx = [], ly = [];
+      for(let yr = 1970; yr <= 2026; yr += 0.5){ lx.push(yr); ly.push(Math.log10(pred(yr))); }
+      const yt = [];
+      const names = {3: "1k", 4: "10k", 5: "100k", 6: "1M", 7: "10M", 8: "100M", 9: "1G", 10: "10G", 11: "100G", 12: "1T"};
+      for(let k = 3; k <= 12; k++) yt.push([k, names[k]]);
+      const labels = showLab ? CHIPS.filter(c => LABELLED.indexOf(c[0]) >= 0).map(c => ({
+        text: c[0], x: c[1], y: Math.log10(c[2]), dx: c[1] > 2010 ? -8 : 8, dy: c[0] === "ARM1" ? 16 : -8, color: "--muted", align: c[1] > 2010 ? "right" : "left"})) : [];
+      plot(q(el, "canvas"), {
+        xlim: [1970, 2026], ylim: [3, 12], yticks: yt,
+        xticks: [[1970, "1970"], [1980, "1980"], [1990, "1990"], [2000, "2000"], [2010, "2010"], [2020, "2020"]],
+        xlabel: "Year of introduction", ylabel: "Transistors (log scale)",
+        series: [
+          {x: lx, y: ly, color: "--right", width: 1.6, dash: [6, 4]},
+          {x: CHIPS.map(c => c[1]), y: CHIPS.map(c => Math.log10(c[2])), color: "--accent", marker: "dot", msize: 3.5, line: false},
+          {x: [Y, Y], y: [3, 12], color: "--plot-axis", width: 1, dash: [2, 3]},
+          {x: [best[1]], y: [Math.log10(best[2])], color: "--accent", marker: "o", msize: 6, line: false}
+        ],
+        labels
+      });
+    }
+  });
+})();
+
+(function(){
+  const {plot, css, TAU} = window.AT;
+
+  function fmtNum(v, d){ return v.toLocaleString("en-GB", {maximumFractionDigits: d === undefined ? 0 : d}); }
+  function fmtPct(p){ return p >= 100 ? fmtNum(p, 0) + " %" : p >= 10 ? p.toFixed(1) + " %" : p >= 0.1 ? p.toFixed(2) + " %" : "&lt; 0.1 %"; }
+  function fmtTime(s){ if(s >= 1) return s.toFixed(2) + " s"; if(s >= 1e-3) return (s*1e3).toFixed(2) + " ms"; if(s >= 1e-6) return (s*1e6).toFixed(1) + " &micro;s"; return (s*1e9).toFixed(1) + " ns"; }
+  function fmtPow(mw){ if(mw >= 1000) return (mw/1000).toPrecision(3) + " W"; if(mw >= 1) return mw.toPrecision(3) + " mW"; return (mw*1000).toPrecision(3) + " &micro;W"; }
+  function fmtEnergy(j){ if(j >= 1e-3) return (j*1e3).toPrecision(3) + " mJ"; if(j >= 1e-6) return (j*1e6).toPrecision(3) + " &micro;J"; return (j*1e9).toPrecision(3) + " nJ"; }
+  function fmtRate(r){ if(r >= 1e12) return (r/1e12).toPrecision(3) + " T"; if(r >= 1e9) return (r/1e9).toPrecision(3) + " G"; if(r >= 1e6) return (r/1e6).toPrecision(3) + " M"; if(r >= 1e3) return (r/1e3).toPrecision(3) + " k"; return r.toPrecision(3) + " "; }
+  function bars(cv, vals, cols){
+    // thick vertical lines as bars, one per category at x = 1..n
+    const w = cv.clientWidth || 600, bw = Math.max(10, Math.min(60, w / (vals.length * 2.6)));
+    return vals.map((v, i) => ({x:[i+1, i+1], y:[v.base, v.top], color: cols[i], width: bw}));
+  }
+
+  /* ---------- FIR real-time budget ---------- */
+  const CLK = [10, 20, 30, 50, 100, 200, 400, 800, 1000];
+  AT.demo("u2-14-fir", {
+    init(el){ el.querySelectorAll("input,select").forEach(i => i.addEventListener("input", () => this.draw(el))); },
+    draw(el){
+      const q = s => el.querySelector(s);
+      const N = Math.pow(2, +q("#u2-14-fir-n").value);
+      const fs = +q("#u2-14-fir-fs").value;
+      const clk = CLK[+q("#u2-14-fir-clk").value] * 1e6;
+      const B = Math.pow(2, +q("#u2-14-fir-b").value);
+      q("#u2-14-fir-n-o").textContent = N + " taps";
+      q("#u2-14-fir-fs-o").textContent = (fs/1000) + " kHz";
+      q("#u2-14-fir-clk-o").textContent = (clk/1e6) + " MHz";
+      q("#u2-14-fir-b-o").textContent = B + (B === 1 ? " sample" : " samples");
+      const budget = clk / fs;
+      const cyc = [8*N + 20, N + 10, Math.ceil(N/4) + 10];
+      const load = cyc.map(c => 100 * c / budget);
+      const lanes = 2048, gclk = 1.5e9, ovh = 30e-6;
+      const tBlock = ovh + N * B / (lanes * gclk);
+      const period = B / fs;
+      load.push(100 * tBlock / period);
+      const lat = period + tBlock;
+      q("#u2-14-fir-ts").innerHTML = fmtTime(1/fs);
+      q("#u2-14-fir-cy").textContent = fmtNum(Math.floor(budget));
+      q("#u2-14-fir-mac").textContent = fmtRate(N*fs) + "MAC/s";
+      q("#u2-14-fir-lat").innerHTML = fmtTime(lat);
+      ["l0","l1","l2","l3"].forEach((k, i) => {
+        const v = q("#u2-14-fir-" + k), ok = load[i] <= 100;
+        v.innerHTML = fmtPct(load[i]) + (ok ? "" : " (fails)");
+        v.classList.toggle("bad", !ok);
+      });
+      const cols = ["--left", "--accent", "--warn", "--muted"];
+      const vals = load.map(p => ({base: -1, top: Math.max(-1, Math.min(4.9, Math.log10(Math.max(p, 1e-3))))}));
+      const series = bars(q("canvas"), vals, cols);
+      series.push({x:[0.4, 4.6], y:[2, 2], color:"--right", width:1.6, dash:[6,4]});
+      plot(q("canvas"), {
+        xlim:[0.4, 4.6], ylim:[-1, 5],
+        xticks:[[1,"CPU"],[2,"DSP 1 MAC"],[3,"SIMD DSP"],[4,"GPU"]],
+        yticks:[[-1,"0.1%"],[0,"1%"],[1,"10%"],[2,"100%"],[3,"1000%"],[4,"10^4 %"],[5,"10^5 %"]],
+        ylabel:"Real-time load (log)", xlabel:"Architecture",
+        series,
+        labels: load.map((p, i) => ({text: p >= 100 ? fmtNum(p, 0) + "%" : p >= 0.1 ? p.toPrecision(2) + "%" : "<0.1%", x: i+1, y: vals[i].top, dy: -6, align:"center", color:"--ink"}))
+          .concat([{text:"100 % = real-time limit", x:4.55, y:2, dy:-6, align:"right", color:"--right"}])
+      });
+    }
+  });
+
+  /* ---------- energy per inference ---------- */
+  const PLAT = [
+    {name:"MCU core, software (Cortex-M4 class)", short:"MCU SW", e:50e-12, idle:0.01, thr:4e7},
+    {name:"MCU with vector unit (Helium class)", short:"Vector MCU", e:10e-12, idle:0.01, thr:4e8},
+    {name:"MCU + microNPU", short:"microNPU", e:1e-12, idle:0.02, thr:5e10},
+    {name:"Hearing-aid DNN accelerator", short:"HA DNN chip", e:0.5e-12, idle:0.005, thr:4e9},
+    {name:"Smartphone NPU (active)", short:"Phone NPU", e:0.5e-12, idle:20, thr:5e12},
+    {name:"Desktop GPU (batch of 1)", short:"GPU", e:5e-12, idle:30000, thr:2e13}
+  ];
+  AT.demo("u2-14-eff", {
+    init(el){ el.querySelectorAll("input,select").forEach(i => i.addEventListener("input", () => this.draw(el))); },
+    draw(el){
+      const q = s => el.querySelector(s);
+      const macs = Math.pow(10, +q("#u2-14-eff-m").value) * 1e6;
+      const rate = Math.pow(10, +q("#u2-14-eff-r").value);
+      q("#u2-14-eff-m-o").textContent = fmtRate(macs) + "MAC per inference";
+      q("#u2-14-eff-r-o").textContent = (rate >= 10 ? fmtNum(rate, 0) : rate.toFixed(1)) + " per s";
+      q("#u2-14-eff-ops").textContent = fmtRate(macs*rate) + "MAC/s (" + fmtRate(2*macs*rate) + "OPS)";
+      const rows = [], vals = [], cols = [], fit = [];
+      PLAT.forEach(p => {
+        const eInf = macs * p.e, tInf = macs / p.thr;
+        const rt = tInf * rate <= 1;
+        const pmw = eInf * rate * 1e3 + p.idle;
+        if(rt && pmw <= 1) fit.push(p.short);
+        rows.push(`<tr><td>${p.name}</td><td class="num">${(p.e*1e12).toPrecision(2)} pJ</td><td class="num">${fmtPow(p.idle)}</td><td class="num">${fmtEnergy(eInf)}</td><td class="num">${fmtTime(tInf)}${rt ? "" : " (too slow)"}</td><td class="num">${rt ? fmtPow(pmw) : "not real time"}</td></tr>`);
+        vals.push({base:-3.5, top: Math.max(-3.5, Math.min(6.4, Math.log10(pmw)))});
+        cols.push(rt ? "--accent" : "--muted");
+      });
+      q("#u2-14-eff-tbl tbody").innerHTML = rows.join("");
+      q("#u2-14-eff-fit").textContent = fit.length ? fit.join(", ") : "none";
+      const cv = q("canvas");
+      const series = bars(cv, vals, cols);
+      series.push({x:[0.4, 6.6], y:[0, 0], color:"--right", width:1.6, dash:[6,4]});
+      plot(cv, {
+        xlim:[0.4, 6.6], ylim:[-3.5, 6.5],
+        xticks: PLAT.map((p, i) => [i+1, p.short]),
+        yticks:[[-3,"1 µW"],[-2,""],[-1,""],[0,"1 mW"],[1,""],[2,""],[3,"1 W"],[4,""],[5,""],[6,"1 kW"]],
+        ylabel:"Average power (log)", xlabel:"Platform (illustrative figures)",
+        series,
+        labels:[{text:"1 mW", x:4.5, y:0, dy:-6, align:"center", color:"--right"}]
+      });
+    }
+  });
+
+  /* ---------- quantisation ---------- */
+  AT.demo("u2-14-q", {
+    init(el){ el.querySelectorAll("input,select").forEach(i => i.addEventListener("input", () => this.draw(el))); },
+    draw(el){
+      const q = s => el.querySelector(s);
+      const N = +q("#u2-14-q-n").value, L = +q("#u2-14-q-a").value;
+      q("#u2-14-q-n-o").textContent = N + " bits" + (N === 8 ? " (int8)" : N === 4 ? " (int4)" : N === 16 ? " (Q15)" : "");
+      q("#u2-14-q-a-o").textContent = L + " dB re full scale";
+      const step = 2 / Math.pow(2, N), qmax = Math.pow(2, N-1) - 1, qmin = -Math.pow(2, N-1);
+      const A = Math.pow(10, L/20) * (1 - step);
+      const quant = v => Math.max(qmin, Math.min(qmax, Math.round(v / step))) * step;
+      // measured SQNR over many samples of a sine at a non-commensurate frequency
+      let ps = 0, pe = 0; const M = 8192, f = 0.0123457;
+      for(let i=0;i<M;i++){ const v = A*Math.sin(TAU*f*i + 0.3); const e = quant(v) - v; ps += v*v; pe += e*e; }
+      const sq = 10*Math.log10(ps / Math.max(pe, 1e-30));
+      const rule = 6.02*N + 1.76;
+      q("#u2-14-q-st").textContent = step.toPrecision(3) + " (" + Math.pow(2, N) + " levels)";
+      q("#u2-14-q-m").textContent = sq.toFixed(1) + " dB";
+      q("#u2-14-q-r").textContent = rule.toFixed(1) + " dB" + (L < 0 ? " (about " + (rule + L).toFixed(1) + " dB at this level)" : "");
+      const x = [], y = [], yq = [], ye = [];
+      for(let i=0;i<=600;i++){ const t = 2*i/600; const v = A*Math.sin(TAU*t); x.push(t); y.push(v); yq.push(quant(v)); ye.push(quant(v) - v); }
+      plot(q("canvas"), {
+        xlim:[0, 2], ylim:[-1.1, 1.1], xlabel:"Time (periods of the sine)", ylabel:"Amplitude (full scale = 1)",
+        series:[{x, y, color:"--left", width:1.5}, {x, y:yq, color:"--accent", width:2, step:true}, {x, y:ye, color:"--right", width:1.2}]
+      });
+    }
+  });
+})();
